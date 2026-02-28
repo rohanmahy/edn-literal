@@ -240,7 +240,7 @@ provide documentation for NaN payloads, which are not covered in this document.
 
 After introductory material, {{app-ext}}
 illustrates the concept of application-oriented extension literals by
-defining the "dt", "ip", and "hash" extensions.
+defining the "dt", "ip", "hash", and "cri" extensions.
 {{stand-in}} defines mechanisms
 for dealing with unknown application-oriented literals and
 deliberately elided information.
@@ -254,7 +254,7 @@ for
 {{<<seccons}} ({{<seccons}}),
 and References ({{<sec-normative-references}}, {{<sec-informative-references}}).
 An informational comparison of EDN with CDDL follows in
-{{edn-and-cddl}}
+{{edn-and-cddl}}.
 
 ## Terminology
 
@@ -427,7 +427,7 @@ Any additional detailed syntax discussion needed has been deferred to
 
 EDN provides _literals_ that represent CBOR data items textually.
 Many of the forms of literals provided are predefined by this
-document, but it also defines an extension point that enables defining
+document, but it also defines an extension point that enables defining additional
 _application-oriented extension literals_, or _extension literals_ for short.
 
 Extension literals start with a _prefix_ that identifies the
@@ -533,7 +533,15 @@ an underscore and all immediately following characters that are alphanumeric or
 underscore is an encoding indicator, and can be ignored by anyone not
 interested in this information.  For example, `_` or `_3`.
 
-Encoding indicators are always optional.
+Encoding indicators are always optional:
+EDN is usually used to describe CBOR data items at the data model
+level.
+For some diagnostic purposes, it is useful to represent the choice of
+a serialization variation by including encoding indicators.
+Implementations of EDN generally do not need to provide this
+functionality, but may want to be able to process EDN that contains
+encoding indicators, ignoring them just as a generic CBOR decoder
+ignores the presence of the serialization variants they express.
 
 Encoding indicators are placed immediately to the right of the data
 item or of a syntactic feature that can stand for the data item the
@@ -734,7 +742,7 @@ certain escaping mechanisms available for double-quoted strings:
   Since EDN's single-quoted strings to not occur in JSON, this legacy
   compatibility feature is not available for them.
 * `\u`-based escapes are not available for characters in the range
-  from U+0020 to U+007e (essentially, printable ASCII).
+  from U+0020 to U+007E (essentially, printable ASCII).
 
 Single-quoted string literals can occur unprefixed and stand for the
 byte string that encodes its text string value (the "content"), or be
@@ -858,7 +866,7 @@ For an indefinite-length string with no chunks inside, `(_ )`
 would be ambiguous as to whether a byte string (encoded 0x5fff) or a text string
 (encoded 0x7fff) is meant and is therefore not used.
 The basic forms `''_` and `""_` can be used instead and are reserved for
-the case of no chunks only --- not as short forms for the (permitted,
+the case of no chunks only — not as short forms for the (permitted,
 but not really useful) encodings with only empty chunks, which
 need to be notated as `(_ '')`, `(_ "")`, etc.,
 when it is desired to preserve the chunk structure.
@@ -1462,8 +1470,9 @@ Elisions also can be used as part of a (text or byte) string:
 ~~~
 
 The example "contract" combines string concatenation via the `+`
-operator ({{grammar}}) with
-ellipses; while the example
+operator ({{grammar}}) with an
+ellipsis.
+The example
 "signature" uses special syntax that allows the use of ellipses
 between the bytes notated _inside_ `h''` literals.
 
