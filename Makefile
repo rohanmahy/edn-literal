@@ -15,6 +15,7 @@ else
 endif
 endif
 
+prep: lists.md
 
 lists.md: draft-ietf-cbor-edn-literals.xml
 	kramdown-rfc-extract-figures-tables -trfc $< >$@.new

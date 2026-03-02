@@ -133,16 +133,8 @@ addresses and prefixes.
 
 [^status]:
     (This cref will be removed by the RFC editor:)\\
-    The present `-19` includes the definition of the cri''
-    application-extension.
-    cri'' was previously defined in draft-ietf-core-href; however the
-    latter document overtook the present document in the approval
-    process.
-    As the definition of cri'' is dependent on the present document
-    (and conversely has essentially no dependency on the technical
-    content of draft-ietf-core-href beyond its mere existence), the
-    text (including IANA considerations) has been moved here.
-    `-19` is intended for use at the CBOR WG meeting at IETF 124.
+    The present `-20` includes the definition of raw strings.
+    `-20` is intended for use at IETF 125.
 
 --- middle
 
@@ -248,7 +240,7 @@ provide documentation for NaN payloads, which are not covered in this document.
 
 After introductory material, {{app-ext}}
 illustrates the concept of application-oriented extension literals by
-defining the "dt", "ip", and "hash" extensions.
+defining the "dt", "ip", "hash", and "cri" extensions.
 {{stand-in}} defines mechanisms
 for dealing with unknown application-oriented literals and
 deliberately elided information.
@@ -262,7 +254,7 @@ for
 {{<<seccons}} ({{<seccons}}),
 and References ({{<sec-normative-references}}, {{<sec-informative-references}}).
 An informational comparison of EDN with CDDL follows in
-{{edn-and-cddl}}
+{{edn-and-cddl}}.
 
 ## Terminology
 
@@ -435,12 +427,12 @@ Any additional detailed syntax discussion needed has been deferred to
 
 EDN provides _literals_ that represent CBOR data items textually.
 Many of the forms of literals provided are predefined by this
-document, but it also defines an extension point that enables defining
+document, but it also defines an extension point that enables defining additional
 _application-oriented extension literals_, or _extension literals_ for short.
 
 Extension literals start with a _prefix_ that identifies the
 application-oriented extension, immediately followed by a sequence
-literal ({{embedded}}) or a single-quoted string literal ({{strings}}).
+literal ({{embedded}}) or a single-quoted or raw string literal ({{strings}}).
 The latter form uses its single-quoted string literal as a shorthand
 form for a sequence literal representing a sequence with exactly that
 one string data item.
@@ -541,7 +533,15 @@ an underscore and all immediately following characters that are alphanumeric or
 underscore is an encoding indicator, and can be ignored by anyone not
 interested in this information.  For example, `_` or `_3`.
 
-Encoding indicators are always optional.
+Encoding indicators are always optional:
+EDN is usually used to describe CBOR data items at the data model
+level.
+For some diagnostic purposes, it is useful to represent the choice of
+a serialization variation by including encoding indicators.
+Implementations of EDN generally do not need to provide this
+functionality, but may want to be able to process EDN that contains
+encoding indicators, ignoring them just as a generic CBOR decoder
+ignores the presence of the serialization variants they express.
 
 Encoding indicators are placed immediately to the right of the data
 item or of a syntactic feature that can stand for the data item the
@@ -678,9 +678,20 @@ the string constitute UTF-8 {{-utf8}} text, major type 3), and byte strings
 (CBOR does not further characterize the bytes that constitute the
 string, major type 2).
 
-### Text String Literals
+EDN has three direct notations for strings: double-quoted and raw
+strings for (UTF-8) text strings, and single-quoted strings for byte strings.
+The latter are useful for byte strings carrying bytes that can be meaningfully
+notated as UTF-8 text ({{sq-lit}}).
 
-EDN notates text strings in a form compatible to that of notating text
+Many strings are best notated as extension literals, which may
+provide detailed access to the bits within those bytes (see
+{{encoded-byte-strings}}).
+Extension literals can be constructed out of single-quoted strings,
+raw strings, and sequence literals.
+
+### Double-Quoted String Literals {#dq-lit}
+
+EDN enables notating text strings in a form compatible to that of notating text
 strings in JSON (i.e., as a double-quoted string literal), with a
 number of usability extensions.
 In JSON, no control characters are allowed to occur
@@ -708,14 +719,6 @@ This means the following are equivalent (the first `o` is escaped as
 "Domino's 🁳 + ⌘"                       # unescaped
 ~~~
 
-### Byte String Literals
-
-EDN adds a number of ways to notate byte strings, some of which
-provide detailed access to the bits within those bytes (see
-{{encoded-byte-strings}}).
-However, quite often, byte strings carry bytes that can be meaningfully
-notated as UTF-8 text ({{sq-lit}}).
-
 ### Single-Quoted String Literals {#sq-lit}
 
 Analogously to text string literals delimited by double quotes, EDN
@@ -739,7 +742,7 @@ certain escaping mechanisms available for double-quoted strings:
   Since EDN's single-quoted strings to not occur in JSON, this legacy
   compatibility feature is not available for them.
 * `\u`-based escapes are not available for characters in the range
-  from U+0020 to U+007e (essentially, printable ASCII).
+  from U+0020 to U+007E (essentially, printable ASCII).
 
 Single-quoted string literals can occur unprefixed and stand for the
 byte string that encodes its text string value (the "content"), or be
@@ -759,7 +762,91 @@ application-oriented extension literals (see {{app-lit}}, called app-string).
 application-oriented extension literals by registering their prefixes;
 there is no fundamental difference between the two predefined
 base-encoded string literal prefixes (`h`, `b64`) and any such potential
-future extension literal prefixes.)
+future extension literal prefixes; for simplicity of expression, both
+cases are referred to as "extension literals".)
+
+### Raw String Literals {#raw-lit}
+
+Both double-quoted and single-quoted string literals handle
+backslashes in a special way.
+For string data items that employ backslashes themselves, possibly with additional layers
+of processing giving these "escaping" application semantics, this can
+lead to an exponential duplication of backslashes that has informally
+been described as "quoting hell".
+
+EDN therefore also allows text strings to be notated as raw string
+literals, which do not perform backslash processing.
+Instead, data transparency is provided by enclosing them in starting
+and ending delimiters built as a sequence of one or more backquote
+(»`` ` ``«, U+0060 GRAVE ACCENT) characters.
+
+For example, the I-Regexp »``[^ \t\n\r"'`]``«, a character class
+that excludes blank space and quoting characters, can be notated as:
+
+     ``[^ \t\n\r"'`]``
+
+instead of
+
+     "[^ \\t\\n\\r\"'`]"
+
+By using more backquotes for the outer delimiters than the longest
+sequence of backquotes that can be found in the string, internal
+backquotes do not prematurely end the string literal.
+An example for a raw string that contains a double backquote and
+therefore is notated starting and ending with a triple backquote:
+
+~~~ cbor-diag
+```To emulate typographic quotes, sometimes duplicate backward and
+forward single quotes are used, as in ``text.''
+```
+~~~
+
+This mechanism is easy to use for the large majority of cases.
+However:
+
+* Raw strings cannot be used for empty string data items, which
+  therefore need to be notated using double- or single-quoted strings.
+  (Obviously, there is no need to escape the content of empty strings,
+  so this should not be a problem.)
+
+* Without additional rules, raw strings could not be used for string
+  data items that start or end with backquotes, as these would
+  amalgamate with the start and end delimiters.
+
+To address the latter cases, two additional rules are added:
+
+* After processing the backquotes used as delimiters, any single
+  newline at the start of a raw string is removed.
+  As a result:
+
+       ```a```
+
+   can also be expressed as
+
+       ```
+       a```
+
+   In addition to enabling leading backquotes in raw strings, this can
+   be very useful for documentation strings etc.
+
+   This rule also allows notating »``` ``text''```« as:
+
+      ```
+      ``text''```
+
+* An ending delimiter with more backquotes than were used in the
+  starting delimiter contributes the superfluous ones to the string.
+
+  This allows notating »``` a = ``foo`` ```« as:
+
+      ```a = ``foo`````
+
+(The examples given here are minimal in that they show how the
+additional rules work; more complex examples would be necessary to
+provide additional motivation why this is a good case to handle.)
+
+See {{grammar}} for a more formal approach to defining these rules.
+
 
 ### Encoding Indicators of Strings {#ei-string}
 
@@ -779,7 +866,7 @@ For an indefinite-length string with no chunks inside, `(_ )`
 would be ambiguous as to whether a byte string (encoded 0x5fff) or a text string
 (encoded 0x7fff) is meant and is therefore not used.
 The basic forms `''_` and `""_` can be used instead and are reserved for
-the case of no chunks only --- not as short forms for the (permitted,
+the case of no chunks only — not as short forms for the (permitted,
 but not really useful) encodings with only empty chunks, which
 need to be notated as `(_ '')`, `(_ "")`, etc.,
 when it is desired to preserve the chunk structure.
@@ -788,14 +875,19 @@ when it is desired to preserve the chunk structure.
 ### Base-Encoded Byte String Literals {#encoded-byte-strings}
 
 Besides the unprefixed byte string literals that are analogous to JSON text
-string literals, EDN provides base-encoded byte string literals.
-These are notated as prefixed string literals that carry one of the base encodings {{-base}}, without
-padding, i.e., the base encoding is
-enclosed in a single-quoted string literal, prefixed by »h« for base16 or
+string literals, EDN provides extension literals that can represent
+byte string by base-encoding them, typically notated as prefixed
+string literals.
+The application-extension identifier selects one of the base encodings
+{{-base}}, without padding.
+Most often, the base encoding is
+enclosed in a single-quoted or raw string literal, prefixed by »h« for base16 or
 »b64« for base64 or base64url (the actual encodings of the latter do
 not overlap, so the string remains unambiguous).
 For example, the byte string consisting of the four bytes `12 34 56 78`
-(given in hexadecimal here) could be written `h'12345678'` or `b64'EjRWeA'`.
+(given in hexadecimal here) could be written `h'12345678'` or
+`b64'EjRWeA'` when using single-quoted string literals, or
+``h`12345678` `` or ``b64`EjRWeA` `` when using raw string literals.
 
 {:aside}
 >
@@ -1378,8 +1470,9 @@ Elisions also can be used as part of a (text or byte) string:
 ~~~
 
 The example "contract" combines string concatenation via the `+`
-operator ({{grammar}}) with
-ellipses; while the example
+operator ({{grammar}}) with an
+ellipsis.
+The example
 "signature" uses special syntax that allows the use of ellipses
 between the bytes notated _inside_ `h''` literals.
 
@@ -1542,7 +1635,26 @@ The following additional items should help in the interpretation:
 6. {: #spec} `spec` stands for an encoding indicator.
   See {{encoding-indicators}} for details.
 
-7. {: #concat}
+7. {: #rawstring-grammar}
+  The ABNF grammar for rawstrings is lenient; a parser needs to
+  implement the comments on `matchrawdelim` and `shortrawdelim` as
+  well.
+  `shortrawdelim` only matches sequences of backquotes that are
+  shorter than `startrawdelim`.
+  `matchrawdelim` only matches sequences of backquotes that are as
+  long or longer than `startrawdelim`.
+  Any excess number of backquotes in `matchrawdelim` are added to the
+  string content.
+
+  {:aside}
+  > In a PEG parser that implements predicates, these matching rules
+  > can for instance be implemented as follows:
+  >
+  >      startrawdelim = rawdelim&{|(rd)|@rdlen = rd.text_value.length}
+  >      shortrawdelim = rawdelim&{|(rd)|rd.text_value.length < @rdlen}
+  >      matchrawdelim = rawdelim&{|(rd)|rd.text_value.length >= @rdlen}
+
+8. {: #concat}
   Extended diagnostic notation allows a (text or byte) string to be
   built up from multiple (text or byte) string literals, separated by
   a `+` operator; these are then concatenated into a single string.
