@@ -796,7 +796,7 @@ An example for a raw string that contains a double backquote and
 therefore is notated starting and ending with a triple backquote:
 
 ~~~ cbor-diag
-```To emulate typographic quotes, sometimes duplicated backward and
+```To emulate typographic quotes, sometimes duplicate backward and
 forward single quotes are used, as in ``text.''
 ```
 ~~~
@@ -1643,7 +1643,7 @@ The following additional items should help in the interpretation:
   shorter than `startrawdelim`.
   `matchrawdelim` only matches sequences of backquotes that are as
   long or longer than `startrawdelim`.
-  Any access number of backquotes in `matchrawdelim` are added to the
+  Any excess number of backquotes in `matchrawdelim` are added to the
   string content.
 
   {:aside}
