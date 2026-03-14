@@ -552,19 +552,26 @@ Similarly, it enables
 9216 /** 9*1024 **/
 ~~~
 
+<aside markdown="1">
+
 The backwards compatibility impact in practice should be limited, as
 the use of asterisks in inline-comments is quite conventional among
 users of the C language; the main problem will be with stylized
 comments such as
 
-~~~ cbor-diag
-/**
- *
- */
-~~~
+> ~~~ cbor-diag
+> /**
+>  *
+>  */
+> ~~~
 
-which now have an extended delimiter with two asterisks in the first
-line that is not matched by the closing delimiter in the third line.
+<!-- Need to indent sourcecode because of RFCXMLv3 bug: no sourcecode in aside -->
+
+for documentation blocks (as in Doxygen), which now have an extended
+delimiter with two asterisks in the first line that is not matched by
+the closing delimiter in the third line.
+
+</aside>
 
 ## Encoding Indicators {#encoding-indicators}
 
