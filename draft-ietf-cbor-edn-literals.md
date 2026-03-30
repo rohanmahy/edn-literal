@@ -4,7 +4,7 @@ v: 3
 title: >
   CBOR Extended Diagnostic Notation (EDN)
 docname: draft-ietf-cbor-edn-literals-latest
-# date: 2025-10-16
+# date: 2026-03-30
 
 keyword: Internet-Draft
 cat: std
@@ -13,6 +13,8 @@ consensus: true
 updates: 8610, 8949
 
 pi: [toc, sortrefs, symrefs, compact, comments]
+kramdown_options:
+  ol_start_at_first_marker: true
 
 author:
   -
@@ -97,7 +99,7 @@ informative:
   RFC7493: i-json
   I-D.bormann-cbor-numbers: numbers
   RFC9165: controls
-  I-D.ietf-cbor-update-8610-grammar: cddlupd
+  RFC9682: cddlupd
   I-D.ietf-cbor-edn-e-ref: eref
   I-D.bormann-t2trg-deref-id: deref
   RFC9512: yaml-media-type
@@ -125,16 +127,19 @@ Replacing EDN's previous informal descriptions, it updates
 RFC 8949, obsoleting its Section 8, and RFC 8610, obsoleting its
 Appendix G.
 
-It also specifies and uses registry-based extension points, using one
-to support text representations of epoch-based dates/times and of IP
+It also specifies registry-based extension points and uses them
+to support text representations such as of epoch-based dates/times and of IP
 addresses and prefixes.
 
 [^status]
 
 [^status]:
     (This cref will be removed by the RFC editor:)\\
-    The present `-20` includes the definition of raw strings.
-    `-20` is intended for use at IETF 125.
+    The present `-21` incorporates pull request #84, including
+    more integrated parsers for using application
+    extensions with raw strings, as well as various cleanup.
+    `-21` is intended for use at the 2026-04-01 CBOR interim, but
+    contains no known April fools pranks.
 
 --- middle
 
@@ -184,8 +189,9 @@ one for adding application-oriented literal forms.
 It uses these registries to add encoding indicators for a more
 complete coverage of encoding variation,
 and to add application-oriented literal forms that enhance EDN with text
-representations of epoch-based date/times and of IP addresses
-and prefixes {{-iptag}} as well as an application-oriented literal that
+representations of epoch-based date/times, of IP addresses
+and prefixes {{-iptag}}, and of Concise Resource Identifiers (CRI
+{{-cri}}), as well as an application-oriented literal that
 represents cryptographic hash values computed from byte strings.
 
 In addition, this document registers a media type identifier
@@ -228,8 +234,8 @@ and learning complexity.
 
 {{diagnostic-notation}} of this document has been built from {{Section 8
 of RFC8949@-cbor}} and {{Section G of RFC8610}}.
-The latter provided a number of useful extensions to the
-diagnostic notation originally defined in {{Section 6 of -old-cbor}}.
+The latter provided a number of useful extensions to the initial
+diagnostic notation that was originally defined in {{Section 6 of -old-cbor}}.
 {{Section 8 of RFC8949@-cbor}} and {{Section G of RFC8610}} have
 collectively been called "Extended Diagnostic Notation" (EDN), giving
 the present document its name.
@@ -289,8 +295,8 @@ expressions {{-iregexp}}.
 
 The term "CDDL" (Concise Data Definition Language) refers to the data
 definition language defined in
-{{-cddl}} and its registered extensions (such as those in {{-controls}}), as
-well as {{-cddlupd}}.
+{{-cddl}} and its registered extensions (such as those documented in
+{{-controls}} and {{-cddlupd}}).
 Additional information about the relationship between the two
 languages EDN and CDDL is captured in {{edn-and-cddl}}.
 
@@ -433,7 +439,7 @@ _application-oriented extension literals_, or _extension literals_ for short.
 Extension literals start with a _prefix_ that identifies the
 application-oriented extension, immediately followed by a sequence
 literal ({{embedded}}) or a single-quoted or raw string literal ({{strings}}).
-The latter form uses its single-quoted string literal as a shorthand
+The latter form uses its string literal as a shorthand
 form for a sequence literal representing a sequence with exactly that
 one string data item.
 
@@ -541,7 +547,7 @@ a serialization variation by including encoding indicators.
 Implementations of EDN generally do not need to provide this
 functionality, but may want to be able to process EDN that contains
 encoding indicators, ignoring them just as a generic CBOR decoder
-ignores the presence of the serialization variants they express.
+ignores the presence of the serialization variants it encounters.
 
 Encoding indicators are placed immediately to the right of the data
 item or of a syntactic feature that can stand for the data item the
@@ -625,7 +631,7 @@ indefinite length strings and in {{ei-container}} for arrays and maps.
  -->
 
 In addition to JSON's decimal number literals, EDN provides hexadecimal, octal,
-and binary number literals in the usual C-language notation (octal with 0o
+and binary number literals in the usual C-language notation (octal with `0o`
 prefix present only).
 
 Numbers composed only of digits (of the respective base) are
@@ -658,7 +664,7 @@ different row.
 | `-0.0`                                         | `F9 8000` # float16 |
 {: #tab-numbers title="Example Sets of Equivalent Notations for Some Numbers"}
 
-The non-finite floating-point numbers `Infinity`, `-Infinity`, and `NaN` are
+The non-finite floating-point values `Infinity`, `-Infinity`, and `NaN` are
 written exactly as in this sentence (this is also a way they can be
 written in JavaScript, although JSON does not allow them).
 
@@ -739,7 +745,7 @@ certain escaping mechanisms available for double-quoted strings:
 
 * `\/` is an escape in JSON that is available for EDN text strings as
   well to ensure all JSON texts are EDN literals.
-  Since EDN's single-quoted strings to not occur in JSON, this legacy
+  Since EDN's single-quoted strings do not occur in JSON, this legacy
   compatibility feature is not available for them.
 * `\u`-based escapes are not available for characters in the range
   from U+0020 to U+007E (essentially, printable ASCII).
@@ -755,8 +761,8 @@ processed in a way that is defined by the meaning given to the prefix.
 Depending on the prefix, the result of that processing can, but need
 not be, a byte string value.
 
-Prefixed string literals (which are always single-quoted after the
-prefix) are used both for base-encoded byte string literals (see {{encoded-byte-strings}}) and for
+Prefixed string literals (whether single-quoted after the
+prefix or a raw string ({{raw-lit}})) are used both for base-encoded byte string literals (see {{encoded-byte-strings}}) and for
 application-oriented extension literals (see {{app-lit}}, called app-string).
 (Additional kinds of base-encoded string literals can be defined as
 application-oriented extension literals by registering their prefixes;
@@ -770,7 +776,7 @@ cases are referred to as "extension literals".)
 Both double-quoted and single-quoted string literals handle
 backslashes in a special way.
 For string data items that employ backslashes themselves, possibly with additional layers
-of processing giving these "escaping" application semantics, this can
+of processing giving this "escaping" mechanism specific application semantics, this can
 lead to an exponential duplication of backslashes that has informally
 been described as "quoting hell".
 
@@ -876,14 +882,14 @@ when it is desired to preserve the chunk structure.
 
 Besides the unprefixed byte string literals that are analogous to JSON text
 string literals, EDN provides extension literals that can represent
-byte string by base-encoding them, typically notated as prefixed
+byte strings by base-encoding them, typically notated as prefixed
 string literals.
 The application-extension identifier selects one of the base encodings
 {{-base}}, without padding.
 Most often, the base encoding is
 enclosed in a single-quoted or raw string literal, prefixed by »h« for base16 or
-»b64« for base64 or base64url (the actual encodings of the latter do
-not overlap, so the string remains unambiguous).
+»b64« for base64 or base64url (the actual encodings of the latter two
+have the same meaning where they overlap, so the string remains unambiguous).
 For example, the byte string consisting of the four bytes `12 34 56 78`
 (given in hexadecimal here) could be written `h'12345678'` or
 `b64'EjRWeA'` when using single-quoted string literals, or
@@ -921,9 +927,9 @@ as `h''` and `b64''` can also allow comments as blank space (see {{comments}}).
 ~~~~
 
 Slash characters are part of the base64 classic alphabet (see
-Table 1 in {{Section 4 of RFC4648}}), and they therefore need be in the
+Table 1 in {{Section 4 of RFC4648}}), and they therefore need to be in the
 `b64''` set of characters that contribute to the byte string.
-Therefore, only end-of-line comments are available in b64 byte string
+Therefore, only end-of-line comments are available inside b64 byte string
 literals.
 
 ~~~~ cbor-diag
@@ -977,7 +983,7 @@ constitute UTF-8, e.g., by building larger sequences out of
 concatenating the subsequences; for validity of a text string
 resulting from these mechanisms it is only of importance that the
 result is UTF-8.
-Both double-quoted and single-quoted string literals have been defined
+Double-quoted, single-quoted, and raw string literals have been defined
 such that they lead to byte sequences that are UTF-8: the source
 language of EDN is UTF-8, and all escaping mechanisms lead only to
 adding further UTF-8 characters.
@@ -1050,6 +1056,8 @@ big difference here.)
 EDN borrows the JSON syntax for arrays and maps.
 (Maps are called objects in JSON.)
 
+### Mandatory Separators, Optional Terminators
+
 For maps, EDN extends the JSON syntax by allowing any data item in the
 map key position (before the colon).
 
@@ -1059,9 +1067,11 @@ pairs) of a map.
 (These commas also were required in the original diagnostic
 notation defined in {{-cbor}} and {{-cddl}}.)
 The separator commas are now optional in the places where EDN syntax
-allows commas.
+allows commas; however, where no comma is used in a separator
+position, there must be blank space (composed of at least one space, newline, and/or
+comment) instead.
 (Stylistically, leaving out the commas is more idiomatic when they
-occur at line breaks.)
+occur at line breaks, which provide the blank space.)
 
 In addition, EDN also allows, but does not require, a trailing comma before the closing bracket/brace,
 enabling an easier to maintain "terminator" style of their use.
@@ -1088,6 +1098,12 @@ as are
 # etc.
 ~~~
 
+As a comma and/or blank/comment is mandatory in a separator position,
+»`[11]`« is unambiguously an array with a single element (the
+integer 11), different from »`[1 1]`« or »`[1,1]`«.
+As this is a general rule, »`[[] []]`« or »`[[],[]]`« are well-formed
+EDN, while »`[[][]]`« is not.
+
 {:aside}
 > CDDL's comma separators in the equivalent contexts (CDDL groups) are
   entirely optional
@@ -1095,6 +1111,7 @@ as are
   allows them to be used like separators as well, or even not at all).
   In summary, comma use is now aligned between EDN and CDDL, in a
   fully backwards compatible way.
+  (CDDL does allow the stylistically questionable »`a = [[][]]`«, though.)
 
 ### Encoding Indicators of Arrays and Maps {#ei-container}
 
@@ -1344,6 +1361,8 @@ This document defines stand-in representation for two such cases:
   data item, destructively replacing complete subtrees or possibly
   just parts of a lengthy string by _elisions_ ({{elision}}).
 
+{:aside}
+>
 Implementation note:
 Typically, the ultimate applications will fail if they encounter tags
 unknown to them, which the ones defined in this section likely are.
@@ -1512,6 +1531,8 @@ This section collects grammars in ABNF form ({{-abnf}} as extended in
 {{-abnfcs}}) that serve to define the syntax of EDN and some
 application-oriented literals.
 
+{:aside}
+>
 Implementation note: The ABNF definitions in this section are
 intended to be useful in a Parsing Expression Grammar (PEG) parser
 interpretation (see {{Appendix A
@@ -1543,10 +1564,10 @@ specification in {{integrated-grammars}}.
 
 For simplicity, the internal parsing for the built-in EDN prefixes is
 specified in the same way.
-ABNF definitions for `h''` and `b64''` are provided in {{h-grammar}} and
-{{b64-grammar}}.
+ABNF definitions for `h''`/``` h`` ``` and `b64''`/```b64`` ``` are
+provided in {{h-grammar}} and {{b64-grammar}}.
 However, the prefixes `b32''` and `h32''` are not in wide use and an
-ABNF definition in this document could therefore not be based on
+ABNF definition in this document would therefore not have been based on
 implementation experience.
 
 ~~~ abnf
@@ -1567,7 +1588,8 @@ The following additional items should help in the interpretation:
   rather than their UTF-8 encoding.  For example, the Unicode PLACE OF
   INTEREST SIGN (U+2318) would be defined in ABNF as %x2318.
 
-2. {: #cr} Unicode CARRIAGE RETURN (U+000D, often seen escaped as "\r" in many
+2. {: #cr} Unicode CARRIAGE RETURN characters (U+000D, often seen
+  escaped as "\r" in many
   programming languages) that exist in the input (unescaped) are
   ignored as if they were not in the input wherever they appear.
   This is most important when they are found in (text or byte) string
@@ -1636,7 +1658,7 @@ The following additional items should help in the interpretation:
   See {{encoding-indicators}} for details.
 
 7. {: #rawstring-grammar}
-  The ABNF grammar for rawstrings is lenient; a parser needs to
+  The ABNF grammar for raw strings is lenient; a parser needs to
   implement the comments on `matchrawdelim` and `shortrawdelim` as
   well.
   `shortrawdelim` only matches sequences of backquotes that are
@@ -1737,16 +1759,19 @@ which are not always repeated here.
 
 {{tab-prefixes}} summarizes the app-prefix values defined in this document.
 
-| app-prefix | content of single-quoted string | result type                                       |
-|------------|---------------------------------|---------------------------------------------------|
-| h          | hexadecimal form of binary data | byte string                                       |
-| H          | (not used)                      |                                                   |
+| app-prefix | content of single-quoted string                    | result type                                       |
+|------------|----------------------------------------------------|---------------------------------------------------|
+| h          | hexadecimal form of binary data                    | byte string                                       |
+| H          | (not used)                                         |                                                   |
 | b64        | base64 forms (classic or base64url) of binary data | byte string                                       |
-| B64        | (not used)                      |                                                   |
-| dt         | RFC 3339 date/time              | number (int or float)                             |
-| DT         | "                               | Tag 1 on the above                                |
-| ip         | IP address or prefix            | byte string, <br/>array of length and byte string |
-| IP         | "                               | Tag 54 (IPv6) or 52 (IPv4) on the above           |
+| B64        | (not used)                                         |                                                   |
+| dt         | RFC 3339 date/time                                 | number (int or float)                             |
+| DT         | "                                                  | Tag 1 on the above                                |
+| ip         | IP address or prefix                               | byte string, <br/>array of length and byte string |
+| IP         | "                                                  | Tag 54 (IPv6) or 52 (IPv4) on the above           |
+| hash       | string (usually used with sequences)               | byte string                                       |
+| cri        | RFC 3986 URI or URI reference                      | CBOR structure representing equivalent CRI        |
+| CRI        | "                                                  | Tag 99 on the above                               |
 {: #tab-prefixes title="App-prefix Values Defined in this Document"}
 
 Note that implementation platforms may already provide implementations
@@ -1754,6 +1779,23 @@ of grammars used in application-extensions, such as of RFC 3339 for
 `dt''` and of IP address syntax for `ip''`.
 EDN-based tools may want to use these implementation libraries instead
 of using the grammars that are provided here as a reference.
+
+For convenience, the common definitions in {{abnf-grammar-ext-common}}
+are not repeated in the below ABNF grammars.
+
+~~~ abnf
+ALPHA           = %x41-5a / %x61-7a
+DIGIT           = %x30-39 ; 0-9
+HEXDIG          = DIGIT / HEXDIGA
+HEXDIGA         = "A" / "B" / "C" / "D" / "E" / "F"
+; Note: double-quoted strings as in "A" are case-insensitive in ABNF
+lblank          = %x0A / %x20  ; Not HT or CR (gone)
+non-lf          = %x20-7F / NONASCII
+NONASCII        = %x80-D7FF / %xE000-10FFFF
+~~~
+{: #abnf-grammar-ext-common sourcecode-name="cbor-edn-extcommon.abnf"
+   title="Common Rules Used in app-extension ABNF grammars"
+}
 
 
 ### h: ABNF Definition of Hexadecimal representation of a byte string {#h-grammar}
@@ -1769,16 +1811,12 @@ well as blank space (including comments) around each hex digit.
 app-string-h    = S *(HEXDIG S HEXDIG S / ellipsis S)
                   ["#" *non-lf]
 ellipsis        = 3*"."
-HEXDIG          = DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
-DIGIT           = %x30-39 ; 0-9
-blank           = %x09 / %x0A / %x0D / %x20
-non-slash       = blank / %x21-2e / %x30-10FFFF
-non-lf          = %x09 / %x0D / %x20-D7FF / %xE000-10FFFF
-S               = *blank *(comment *blank )
+non-slash       = lblank / %x21-2e / %x30-7f / NONASCII
+S               = *lblank *(comment *lblank )
 comment         = "/" *non-slash "/"
                 / "#" *non-lf %x0A
 ~~~
-{: #abnf-grammar-h sourcecode-name="cbor-edn-h.abnf"
+{: #abnf-grammar-h sourcecode-name="cbor-edn-ext-h.abnf"
 title="ABNF Definition of Hexadecimal Representation of a Byte String"
 }
 
@@ -1787,7 +1825,7 @@ title="ABNF Definition of Hexadecimal Representation of a Byte String"
 
 
 The syntax of the content of byte strings represented in base64 is
-described by the ABNF in {{abnf-grammar-h}}.
+described by the ABNF in {{abnf-grammar-b64}}.
 
 This syntax allows both the classic ({{Section 4 of RFC4648}}) and the
 URL-safe ({{Section 5 of RFC4648}}) alphabet to be used.
@@ -1798,23 +1836,20 @@ in-line comments in b64, as "/" is valid base64-classic.
 ~~~ abnf
 app-string-b64  = B *(4(b64dig B))
                   [b64dig B b64dig B ["=" B "=" / b64dig B ["="]] B]
-                  ["#" *inon-lf]
+                  ["#" *non-lf]
 b64dig          = ALPHA / DIGIT / "-" / "_" / "+" / "/"
-B               = *iblank *(icomment *iblank)
-iblank          = %x0A / %x20  ; Not HT or CR (gone)
-icomment        = "#" *inon-lf %x0A
-inon-lf         = %x20-D7FF / %xE000-10FFFF
-ALPHA           = %x41-5a / %x61-7a
-DIGIT           = %x30-39
+B               = *lblank *(icomment *lblank)
+icomment        = "#" *non-lf %x0A
 ~~~
-{: #abnf-grammar-b64 sourcecode-name="cbor-edn-b64.abnf"
+{: #abnf-grammar-b64 sourcecode-name="cbor-edn-ext-b64.abnf"
 title="ABNF definition of Base64 Representation of a Byte String"
 }
 
 ### dt: ABNF Definition of RFC 3339 Representation of a Date/Time {#dt-grammar}
 
 The syntax of the content of `dt` literals can be described by the
-ABNF for `date-time` from {{RFC3339}} as summarized in {{Section 3 of -controls}}:
+ABNF for `date-time` in {{abnf-grammar-dt}}.
+This is derived from {{RFC3339}} as summarized in {{Section 3 of -controls}}.
 
 ~~~ abnf
 app-string-dt   = date-time
@@ -1837,9 +1872,8 @@ full-date       = date-fullyear "-" date-month "-" date-mday
 full-time       = partial-time time-offset
 
 date-time       = full-date "T" full-time
-DIGIT           =  %x30-39 ; 0-9
 ~~~
-{: #abnf-grammar-dt sourcecode-name="cbor-edn-dt.abnf"
+{: #abnf-grammar-dt sourcecode-name="cbor-edn-ext-dt.abnf"
 title="ABNF Definition of RFC3339 Representation of a Date/Time"
 }
 
@@ -1877,12 +1911,10 @@ dec-octet     = "25" %x30-35         ; 250-255
               / %x31-39 DIGIT        ; 10-99
               / DIGIT                ; 0-9
 
-HEXDIG        = DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
-DIGIT         = %x30-39 ; 0-9
 DIGIT1        = %x31-39 ; 1-9
 uint          = "0" / DIGIT1 *DIGIT
 ~~~
-{: #abnf-grammar-ip sourcecode-name="cbor-edn-ip.abnf"
+{: #abnf-grammar-ip sourcecode-name="cbor-edn-ext-ip.abnf"
 title="ABNF Definition of Textual Representation of an IP Address"}
 
 
@@ -1935,7 +1967,7 @@ IP-literal    = "[" ( IPv6address / IPvFuture  ) "]"
 IPvFuture     = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
 
 ; Use IPv6address, h16, ls32, IPv4adress, dec-octet as re-arranged
-; for PEG Compatibility in Figure 5 of [I-D.ietf-cbor-edn-literals]:
+; for PEG Compatibility in Figure 6 of [RFC XXXX]:
 
 IPv6address   =                            6( h16 ":" ) ls32
               /                       "::" 5( h16 ":" ) ls32
@@ -1955,10 +1987,6 @@ dec-octet     = "25" %x30-35         ; 250-255
               / "1" 2DIGIT           ; 100-199
               / %x31-39 DIGIT        ; 10-99
               / DIGIT                ; 0-9
-ALPHA         = %x41-5a / %x61-7a
-DIGIT         = %x30-39
-HEXDIG        = DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
-; case insensitive matching, i.e., including lower case
 
 reg-name      = *( unreserved / pct-encoded / sub-delims )
 
@@ -1993,7 +2021,7 @@ gen-delims    = ":" / "/" / "?" / "#" / "[" / "]" / "@"
 sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
                  / "*" / "+" / "," / ";" / "="
 ~~~
-{: #abnf-grammar-cri sourcecode-name="cbor-edn-cri.abnf"
+{: #abnf-grammar-cri sourcecode-name="cbor-edn-ext-cri.abnf"
 title="ABNF Definition of URI Representation of a CRI"
 }
 
@@ -2020,7 +2048,7 @@ bstr            = sq-app-string-dt /
 sq-app-string-dt = (%s"dt'"/%s"DT'") app-string-dt "'"
 ~~~
 {: #abnf-grammar-sq-glue sourcecode-name="cbor-edn-glue.abnf"
-title="Glue Code for Integrated DT Parser"
+title="Glue ABNF for Integrated DT Parser"
 }
 
 To facilitate writing integrated ABNF for more complex prefixed
@@ -2053,31 +2081,31 @@ FOURHEX1 = (DIGIT1 / "A"/"B"/"C" / "E"/"F") 3HEXDIG
 ; 00xx - ASCII + 007F
 TWOHEX1  = ("8"/"9" / HEXDIGA) HEXDIG / "7F"
 ~~~
-{: #abnf-grammar-sq sourcecode-name="cbor-edn-bricklets.abnf"
+{: #abnf-grammar-sq sourcecode-name="cbor-edn-intcommon.abnf"
 title="ABNF Definitions Useful for Integrated Extension Parsers"}
 
-Similarly, for integrated parsers for raw strings, the ABNF
+Similarly, for integrated parsers for extension literals built from raw strings, the ABNF
 definitions in {{abnf-grammar-rs}} can be useful.
 `fitrawdelim` only matches sequences of backquotes that are exactly as
 long as a previous `startrawdelim`.
 
 ~~~ abnf
-fitrawdelim  = rawdelim
-r-non-lf = %x09 / %x0D / %x20-5f / %x61-7f / NONASCII / shortrawdelim
+fitrawdelim  = rawdelim ; width == previous startrawdelim
+r-non-lf = %x0D / %x20-5f / %x61-7f / NONASCII / shortrawdelim
 ~~~
-{: #abnf-grammar-rs sourcecode-name="cbor-edn-raw-bricklets.abnf"
+{: #abnf-grammar-rs sourcecode-name="cbor-edn-raw-intcommon.abnf"
 title="ABNF Definitions Useful for Raw String Integrated Extension Parsers"}
 
 
   {:aside}
-  > In a PEG parser that implements predicates, the matching rules for fitrawdelim
+  > In a PEG parser that implements predicates, the matching rule for fitrawdelim
   > can for instance be implemented as follows:
   >
   >      fitrawdelim = rawdelim&{|(rd)|rd.text_value.length == @rdlen}
 
 
-Two subsections with ABNF for integrated parsers follow, one for `h''`,
-and one for `b64''`.
+Four subsections with ABNF for integrated parsers follow, a pair for
+`h''` and `b64''`, and a pair for ``` h`` ``` and ``` b64`` ```.
 There is no requirement for a new application-extension to supply ABNF
 for an integrated parser (or any ABNF at all!), in particular if the
 parsing function is likely to be fulfilled by a platform library.
@@ -2089,13 +2117,14 @@ derivation is available as open-source software {{ABNFROB}}.
 
 ### h'': ABNF Definition of Integrated Parser {#sq-h-grammar}
 
-With glue code similar to that in {{abnf-grammar-sq-glue}}, ABNF such as
+With glue ABNF similar to that in {{abnf-grammar-sq-glue}} and common
+definitions in Figures {{<abnf-grammar-ext-common}} and {{<abnf-grammar-sq}}, ABNF such as
 that shown in {{abnf-grammar-sq-h}} can be used as an integrated parser
-for `h''` prefixed single-quote strings.
+for `h` prefixed single-quote strings.
 
 ~~~ abnf
-sq-app-string-h = %s"h'" app-string-h "'"
-app-string-h = h-S *(HEXDIG h-S HEXDIG h-S / ellipsis h-S)
+sq-app-string-h = %s"h'" s-app-string-h "'"
+s-app-string-h = h-S *(HEXDIG h-S HEXDIG h-S / ellipsis h-S)
     ["#" *(i-non-lf)]
 
 h-S = *(i-blank) *(h-comment *(i-blank))
@@ -2104,20 +2133,21 @@ h-non-slash = i-blank / %x21-26 / "\'" / %x28-2e
 h-comment = "/" *(h-non-slash) "/"
           / "#" *(i-non-lf) i-LF
 ~~~
-{: #abnf-grammar-sq-h sourcecode-name="cbor-edn-h.abnf"
+{: #abnf-grammar-sq-h sourcecode-name="cbor-edn-int-hsq.abnf"
 title="ABNF Definition for Integrated Hex Parser"
 }
 
 
 ### b64'': ABNF Definition of Integrated Parser {#sq-b64-grammar}
 
-With glue code similar to that in {{abnf-grammar-sq-glue}}, ABNF such as
+With glue ABNF similar to that in {{abnf-grammar-sq-glue}} and common
+definitions in Figures {{<abnf-grammar-ext-common}} and {{<abnf-grammar-sq}}, ABNF such as
 that shown in {{abnf-grammar-sq-b64}} can be used as an integrated parser
-for `h''` prefixed single-quote strings.
+for `b64` prefixed single-quote strings.
 
 ~~~ abnf
-sq-app-string-b64 = %s"b64'" app-string-b64 "'"
-app-string-b64  = b64-S *(4(b64dig b64-S))
+sq-app-string-b64 = %s"b64'" s-app-string-b64 "'"
+s-app-string-b64  = b64-S *(4(b64dig b64-S))
                   [b64dig b64-S b64dig b64-S
                    ["=" b64-S "=" / b64dig b64-S ["="]] b64-S]
                   ["#" *i-non-lf]
@@ -2125,44 +2155,54 @@ b64dig          = ALPHA / DIGIT / "-" / "_" / "+" / "/"
 b64-S           = *i-blank *(b64-comment *i-blank)
 b64-comment     = "#" *i-non-lf %x0A
 ~~~
-{: #abnf-grammar-sq-b64 sourcecode-name="cbor-edn-b64.abnf"
+{: #abnf-grammar-sq-b64 sourcecode-name="cbor-edn-int-b64sq.abnf"
 title="ABNF Definition for Integrated Base64 Parser"
 }
 
 
 ### h``: ABNF Definition of Integrated Parser {#sq-h-raw-grammar}
 
-With glue code similar to that in {{abnf-grammar-sq-glue}}, ABNF such as
-that shown in {{abnf-grammar-sq-h}} can be used as an integrated parser
-for `h''` prefixed single-quote strings.
+With glue ABNF similar to that in {{abnf-grammar-sq-glue}} and common
+definitions in Figures {{<abnf-grammar-ext-common}}, {{<abnf-grammar-sq}}
+and
+{{<abnf-grammar-rs}}, ABNF such as that shown in {{abnf-grammar-rs-h}} can
+be used as an integrated parser for ``` h ``` prefixed raw strings.
 
 ~~~ abnf
 raw-app-string-h = %s"h" startrawdelim r-app-string-h
-r-app-string-h = rh-S *(HEXDIG rh-S HEXDIG rh-S / ellipsis h-S)
+r-app-string-h = rh-S *(HEXDIG rh-S HEXDIG rh-S / ellipsis rh-S)
     ("#" *(r-non-lf) matchrawdelim / fitrawdelim)
-rh-S = *(blank) *(rh-comment *(blank))
-rh-non-slash = blank / %x21-2e / %x30-5f / %x61-7f / NONASCII / shortrawdelim
+rh-S = *(lblank) *(rh-comment *(lblank))
+rh-non-slash = lblank / %x21-2e / %x30-5f / %x61-7f
+             / NONASCII / shortrawdelim
 rh-comment = "/" *(rh-non-slash) "/"
-          / "#" *(r-non-lf) %x0A
+           / "#" *(r-non-lf) %x0A
 ~~~
-{: #abnf-grammar-rs-h sourcecode-name="cbor-edn-hraw.abnf"
+{: #abnf-grammar-rs-h sourcecode-name="cbor-edn-int-hraw.abnf"
 title="ABNF Definition for Integrated Raw String Hex Parser"
 }
 
 
 ### b64``: ABNF Definition of Integrated Parser {#sq-b64-raw-grammar}
 
+With glue ABNF similar to that in {{abnf-grammar-sq-glue}}, common
+definitions in Figures {{<abnf-grammar-ext-common}}, {{<abnf-grammar-sq}}
+and {{<abnf-grammar-rs}} as well as the rule
+`b64dig` from {{abnf-grammar-sq-b64}}, ABNF such as
+that shown in {{abnf-grammar-rs-b64}} can be used as an integrated parser
+for ``` b64 ``` prefixed raw strings.
+
 
 ~~~ abnf
 raw-app-string-b64 = %s"b64" startrawdelim r-app-string-b64
-r-app-string-b64  = b64-S *(4(b64dig b64-S))
+r-app-string-b64  = rb64-S *(4(b64dig rb64-S))
                   [b64dig rb64-S b64dig rb64-S
                    ["=" rb64-S "=" / b64dig rb64-S ["="]] rb64-S]
                   ("#" *r-non-lf matchrawdelim / fitrawdelim)
-rb64-S           = *blank *(rb64-comment *blank)
+rb64-S           = *lblank *(rb64-comment *lblank)
 rb64-comment     = "#" *r-non-lf %x0A
 ~~~
-{: #abnf-grammar-rs-b64 sourcecode-name="cbor-edn-b64raw.abnf"
+{: #abnf-grammar-rs-b64 sourcecode-name="cbor-edn-int-b64raw.abnf"
 title="ABNF Definition for Integrated Raw String Base64 Parser"
 }
 
