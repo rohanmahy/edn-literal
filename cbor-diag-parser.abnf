@@ -59,24 +59,18 @@ array           = "[" (specms S item *(MSC item) SOC / spec S) "]"
 map             = "{" (specms S keyp *(MSC keyp) SOC / spec S) "}"
 keyp            = item S ":" S item
 
-; We allow %x09 HT in prose, but not in strings
+; We allow %x09 HT in prose, but not in string literals
 blank           = %x09 / %x0A / %x0D / %x20
+lblank          = %x0A / %x20  ; Not HT or CR (gone)
 non-slash       = blank / %x21-2e / %x30-7F / NONASCII
-non-slash-non-star = blank / %x21-29 / %x2b-2e / %x30-7F / NONASCII
+non-slash-star  = blank / %x21-29 / %x2b-2e / %x30-7F / NONASCII
+non-star        = blank / %x21-29 / %x2b-7F / NONASCII
+end-star        = *non-star 1*"*"
 non-lf          = %x09 / %x0D / %x20-7F / NONASCII
-comment         = "/" c-comment1
-                / "#" *non-lf %x0A
-c-comment1      = [non-slash-non-star *non-slash] "/"
-                / c-comment-start *c-comment-mid c-comment-end "/"
-stars           = 1*"*"
-c-comment-start = stars
-c-comment-mid   = [stars] 1*non-slash-non-star
-                / [c-comment-short] "/"
-                  ; width (number of stars) distinguishes
-                  ; between following c-comment-short and c-comment-end
-c-comment-short = stars ; width < previous c-comment-start
-c-comment-end   = stars ; width >= previous c-comment-start
-
+eol-comment     = "#" / "//"
+comment         = "/" non-slash-star *non-slash "/"
+                / "/*" end-star *(non-slash-star end-star) "/"
+                / eol-comment *non-lf %x0A
 ; optional space
 S               = *blank *(comment *blank)
 ; mandatory space

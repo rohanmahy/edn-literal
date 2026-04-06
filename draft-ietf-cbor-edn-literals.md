@@ -1801,7 +1801,7 @@ HEXDIG          = DIGIT / HEXDIGA
 HEXDIGA         = "A" / "B" / "C" / "D" / "E" / "F"
 ; Note: double-quoted strings as in "A" are case-insensitive in ABNF
 lblank          = %x0A / %x20  ; Not HT or CR (gone)
-non-lf          = %x20-7F / NONASCII
+non-lf          = %x20-7f / NONASCII
 NONASCII        = %x80-D7FF / %xE000-10FFFF
 ~~~
 {: #abnf-grammar-ext-common sourcecode-name="cbor-edn-extcommon.abnf"
@@ -1820,12 +1820,18 @@ well as blank space (including comments) around each hex digit.
 
 ~~~ abnf
 app-string-h    = S *(HEXDIG S HEXDIG S / ellipsis S)
-                  ["#" *non-lf]
+                  [eol-comment *non-lf]
 ellipsis        = 3*"."
 non-slash       = lblank / %x21-2e / %x30-7f / NONASCII
-S               = *lblank *(comment *lblank )
-comment         = "/" *non-slash "/"
-                / "#" *non-lf %x0A
+non-slash-star  = lblank / %x21-29 / %x2b-2e / %x30-7f / NONASCII
+non-star        = lblank / %x21-29 / %x2b-7f / NONASCII
+end-star        = *non-star 1*"*"
+non-lf          = %x20-7f / NONASCII
+eol-comment     = "#" / "//"
+S               = *lblank *(comment *lblank)
+comment         = "/" non-slash-star *non-slash "/"
+                / "/*" end-star *(non-slash-star end-star) "/"
+                / eol-comment *non-lf %x0A
 ~~~
 {: #abnf-grammar-h sourcecode-name="cbor-edn-ext-h.abnf"
 title="ABNF Definition of Hexadecimal Representation of a Byte String"
@@ -1849,8 +1855,8 @@ app-string-b64  = B *(4(b64dig B))
                   [b64dig B b64dig B ["=" B "=" / b64dig B ["="]] B]
                   ["#" *non-lf]
 b64dig          = ALPHA / DIGIT / "-" / "_" / "+" / "/"
-B               = *lblank *(icomment *lblank)
-icomment        = "#" *non-lf %x0A
+B               = *lblank *(comment *lblank)
+comment         = "#" *non-lf %x0A
 ~~~
 {: #abnf-grammar-b64 sourcecode-name="cbor-edn-ext-b64.abnf"
 title="ABNF definition of Base64 Representation of a Byte String"
@@ -2136,13 +2142,19 @@ for `h` prefixed single-quote strings.
 ~~~ abnf
 sq-app-string-h = %s"h'" s-app-string-h "'"
 s-app-string-h = h-S *(HEXDIG h-S HEXDIG h-S / ellipsis h-S)
-    ["#" *(i-non-lf)]
+    [eol-comment *i-non-lf]
 
 h-S = *(i-blank) *(h-comment *(i-blank))
 h-non-slash = i-blank / %x21-26 / "\'" / %x28-2e
             / %x30-5b / "\\" / %x5d-7f / i-NONASCII
-h-comment = "/" *(h-non-slash) "/"
-          / "#" *(i-non-lf) i-LF
+h-non-slash-star = i-blank / %x21-26 / "\'" / %x28-29 / %x2b-2e
+                 / %x30-5b / "\\" / %x5d-7f / i-NONASCII
+h-non-star = i-blank / %x21-26 / "\'" / %x28-29 / %x2b-5b
+           / "\\" / %x5d-7f / i-NONASCII
+h-end-star = *h-non-star 1*"*"
+h-comment = "/" h-non-slash-star *h-non-slash "/"
+          / "/*" h-end-star *(h-non-slash-star h-end-star) "/"
+          / eol-comment *i-non-lf i-LF
 ~~~
 {: #abnf-grammar-sq-h sourcecode-name="cbor-edn-int-hsq.abnf"
 title="ABNF Definition for Integrated Hex Parser"
@@ -2182,12 +2194,16 @@ be used as an integrated parser for ``` h ``` prefixed raw strings.
 ~~~ abnf
 raw-app-string-h = %s"h" startrawdelim r-app-string-h
 r-app-string-h = rh-S *(HEXDIG rh-S HEXDIG rh-S / ellipsis rh-S)
-    ("#" *(r-non-lf) matchrawdelim / fitrawdelim)
+    (eol-comment *r-non-lf matchrawdelim / fitrawdelim)
 rh-S = *(lblank) *(rh-comment *(lblank))
-rh-non-slash = lblank / %x21-2e / %x30-5f / %x61-7f
-             / NONASCII / shortrawdelim
-rh-comment = "/" *(rh-non-slash) "/"
-           / "#" *(r-non-lf) %x0A
+rh-2 = %x61-7f / NONASCII / shortrawdelim
+rh-non-slash = lblank / %x21-2e / %x30-5f / rh-2
+rh-non-slash-star = lblank / %x21-29 / %x2b-2e / %x30-5f / rh-2
+rh-non-star = lblank / %x21-29 / %x2b-5f / rh-2
+rh-end-star = *rh-non-star 1*"*"
+rh-comment = "/" rh-non-slash-star *rh-non-slash "/"
+           / "/*" rh-end-star *(rh-non-slash-star rh-end-star) "/"
+           / eol-comment *r-non-lf %x0A
 ~~~
 {: #abnf-grammar-rs-h sourcecode-name="cbor-edn-int-hraw.abnf"
 title="ABNF Definition for Integrated Raw String Hex Parser"
