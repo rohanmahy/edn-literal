@@ -30,11 +30,18 @@ simple          = %s"false"
 uint            = "0" / DIGIT1 *DIGIT
 tagged          = uint spec "(" S item S ")"
 
-app-prefix      = lcalpha *lcldh ; including h and b64
-                / ucalpha *ucldh ; tagged variant, if defined
-app-string      = app-prefix sqstr
-app-sequence    = app-prefix "<<" seq ">>"
-app-rstring     = app-prefix rawstring
+app-string      = known-app-strs / (app-prefix-ext sqstr)
+known-app-strs  = app-str-h / app-str-b64 /
+                  app-str-ip / app-str-dt /
+                  app-str-cri
+
+app-rstring     = known-app-rstrs / (app-prefix-ext rawstring)
+
+app-sequence    = known-app-prefix / app-seq-ext
+app-seq-ext     = app-prefix-ext "<<" seq ">>"
+
+app-prefix-ext  = lcalpha *lcldh
+                / ucalpha *ucldh
 rawstring       = startrawdelim
                   [newline] ; swallow up to one leading newline
                   rawcontent

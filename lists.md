@@ -9,20 +9,11 @@
 {{abnf-grammar-ext-common}}:
 : {{<<abnf-grammar-ext-common}}
 
-{{abnf-grammar-h}}:
-: {{<<abnf-grammar-h}}
-
-{{abnf-grammar-b64}}:
-: {{<<abnf-grammar-b64}}
-
 {{abnf-grammar-dt}}:
 : {{<<abnf-grammar-dt}}
 
 {{abnf-grammar-ip}}:
 : {{<<abnf-grammar-ip}}
-
-{{abnf-grammar-cri}}:
-: {{<<abnf-grammar-cri}}
 
 {{abnf-grammar-sq-glue}}:
 : {{<<abnf-grammar-sq-glue}}
@@ -32,18 +23,6 @@
 
 {{abnf-grammar-rs}}:
 : {{<<abnf-grammar-rs}}
-
-{{abnf-grammar-sq-h}}:
-: {{<<abnf-grammar-sq-h}}
-
-{{abnf-grammar-sq-b64}}:
-: {{<<abnf-grammar-sq-b64}}
-
-{{abnf-grammar-rs-h}}:
-: {{<<abnf-grammar-rs-h}}
-
-{{abnf-grammar-rs-b64}}:
-: {{<<abnf-grammar-rs-b64}}
 
 
 # List of Tables

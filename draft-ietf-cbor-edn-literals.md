@@ -50,7 +50,6 @@ normative:
   IANA.core-parameters:
   BCP26: ianacons
   STD80: ascii
-  I-D.ietf-core-href: cri
   IEEE754:
     target: https://ieeexplore.ieee.org/document/8766229
     title: IEEE Standard for Floating-Point Arithmetic
@@ -189,9 +188,8 @@ one for adding application-oriented literal forms.
 It uses these registries to add encoding indicators for a more
 complete coverage of encoding variation,
 and to add application-oriented literal forms that enhance EDN with text
-representations of epoch-based date/times, of IP addresses
-and prefixes {{-iptag}}, and of Concise Resource Identifiers (CRI
-{{-cri}}), as well as an application-oriented literal that
+representations of epoch-based date/times, and of IP addresses
+and prefixes {{-iptag}}, as well as an application-oriented literal that
 represents cryptographic hash values computed from byte strings.
 
 In addition, this document registers a media type identifier
@@ -246,7 +244,7 @@ provide documentation for NaN payloads, which are not covered in this document.
 
 After introductory material, {{app-ext}}
 illustrates the concept of application-oriented extension literals by
-defining the "dt", "ip", "hash", and "cri" extensions.
+defining the "dt", "ip", and "hash" extensions.
 {{stand-in}} defines mechanisms
 for dealing with unknown application-oriented literals and
 deliberately elided information.
@@ -1174,8 +1172,6 @@ equivalent notation not using an application-extension identifier.
 | `dt'1969-07-21T02:56:16Z'`   | `-14159024`    |
 | `dt'1969-07-21T02:56:16.0Z'` | `-14159024.0`  |
 | `dt'1969-07-21T02:56:16.5Z'` | `-14159023.5`  |
-| `dt<<'1969-07-21T02:56:16.5Z'>>` | `-14159023.5`  |
-| `dt<<"1969-07-21T02:56:16.5Z">>` | `-14159023.5`  |
 | `DT'1969-07-21T02:56:16Z'`   | `1(-14159024)` |
 {: #tab-equiv-dt title="dt and DT literals vs. plain EDN"}
 
@@ -1224,7 +1220,6 @@ equivalent notation not using an application-extension identifier.
 | ip literal          | plain EDN                                 |
 |---------------------|-------------------------------------------|
 | `ip'192.0.2.42'`    | `h'c000022a'`                             |
-| `ip<<'192.0.2.42'>>` | `h'c000022a'`                             |
 | `IP'192.0.2.42'`    | `52(h'c000022a')`                         |
 | `IP'192.0.2.0/24'`  | `52([24,h'c00002'])`                      |
 | `ip'2001:db8::42'`  | `h'20010db8000000000000000000000042'`     |
@@ -1266,40 +1261,6 @@ identifier "hash".
 {: #tab-equiv-hash title="hash literals vs. plain EDN"}
 
 
-The "cri" Extension {#cri}
---------------------
-
-The
-application-extension identifier "`cri`" is used to notate
-an EDN literal for a CRI reference as defined in {{-cri}}.
-
-The text of the literal is a URI Reference as per {{-uri}} or an IRI
-Reference as per {{-iri}}.
-
-The value of the literal is a CRI reference that can be converted to
-the text of the literal using the procedure of {{Section 6.1 of -cri}}.  <!-- {{cri-to-uri}}. -->
-Note that there may be more than one CRI reference that can be
-converted to the URI/IRI reference given; implementations are expected
-to favor the simplest variant available and make non-surprising
-choices otherwise.
-In the all-upper-case variant of the app-prefix, the value is enclosed
-in a tag number 99.
-
-As an example, the CBOR diagnostic notation
-
-~~~ cbor-diag
-cri'https://example.com/bottarga/shaved'
-CRI'https://example.com/bottarga/shaved'
-~~~
-
-is equivalent to
-
-~~~ cbor-diag
-[-4, ["example", "com"], ["bottarga", "shaved"]]
-99([-4, ["example", "com"], ["bottarga", "shaved"]])
-~~~
-
-See {{cri-grammar}} for an ABNF definition for the content of `cri` literals.
 
 
 Stand-in Representations in Binary CBOR {#stand-in}
@@ -1728,8 +1689,6 @@ which are not always repeated here.
 | ip         | IP address or prefix                               | byte string, <br/>array of length and byte string |
 | IP         | "                                                  | Tag 54 (IPv6) or 52 (IPv4) on the above           |
 | hash       | string (usually used with sequences)               | byte string                                       |
-| cri        | RFC 3986 URI or URI reference                      | CBOR structure representing equivalent CRI        |
-| CRI        | "                                                  | Tag 99 on the above                               |
 {: #tab-prefixes title="App-prefix Values Defined in this Document"}
 
 Note that implementation platforms may already provide implementations
@@ -1766,15 +1725,17 @@ This syntax accommodates both lower case and upper case hex digits, as
 well as blank space (including comments) around each hex digit.
 
 ~~~ abnf
-app-string-h    = S *(HEXDIG S HEXDIG S / ellipsis S)
-                  ["#" *non-lf]
-ellipsis        = 3*"."
-non-slash       = lblank / %x21-2e / %x30-7f / NONASCII
-S               = *lblank *(comment *lblank )
-comment         = "/" *non-slash "/"
-                / "#" *non-lf %x0A
+app-string-h   = %s"h'" s-app-string-h "'"
+s-app-string-h = h-S *(HEXDIG h-S HEXDIG h-S / ellipsis h-S)
+    ["#" *(i-non-lf)]
+
+h-S = *(i-blank) *(h-comment *(i-blank))
+h-non-slash = i-blank / %x21-26 / "\'" / %x28-2e
+            / %x30-5b / "\\" / %x5d-7f / i-NONASCII
+h-comment = "/" *(h-non-slash) "/"
+          / "#" *(i-non-lf) i-LF
 ~~~
-{: #abnf-grammar-h sourcecode-name="cbor-edn-ext-h.abnf"
+{: #abnf-grammar-h
 title="ABNF Definition of Hexadecimal Representation of a Byte String"
 }
 
@@ -1792,14 +1753,16 @@ Note that inclusion of classic base64 makes it impossible to have
 in-line comments in b64, as "/" is valid base64-classic.
 
 ~~~ abnf
-app-string-b64  = B *(4(b64dig B))
-                  [b64dig B b64dig B ["=" B "=" / b64dig B ["="]] B]
-                  ["#" *non-lf]
+app-string-b64    = %s"b64'" s-app-string-b64 "'"
+s-app-string-b64  = b64-S *(4(b64dig b64-S))
+                  [b64dig b64-S b64dig b64-S
+                   ["=" b64-S "=" / b64dig b64-S ["="]] b64-S]
+                  ["#" *i-non-lf]
 b64dig          = ALPHA / DIGIT / "-" / "_" / "+" / "/"
-B               = *lblank *(icomment *lblank)
-icomment        = "#" *non-lf %x0A
+b64-S           = *i-blank *(b64-comment *i-blank)
+b64-comment     = "#" *i-non-lf %x0A
 ~~~
-{: #abnf-grammar-b64 sourcecode-name="cbor-edn-ext-b64.abnf"
+{: #abnf-grammar-b64
 title="ABNF definition of Base64 Representation of a Byte String"
 }
 
@@ -1810,7 +1773,8 @@ ABNF for `date-time` in {{abnf-grammar-dt}}.
 This is derived from {{RFC3339}} as summarized in {{Section 3 of -controls}}.
 
 ~~~ abnf
-app-string-dt   = date-time
+app-string-dt   = dt-prefixes SQUOTE date-time SQUOTE
+dt-prefixes     = %s"dt" / %s"DT"
 
 date-fullyear   = 4DIGIT
 date-month      = 2DIGIT  ; 01-12
@@ -1843,7 +1807,8 @@ ABNF for `IPv4address` and `IPv6address` in {{Section 3.2.2 of -uri}},
 as included in slightly updated form in {{abnf-grammar-ip}}.
 
 ~~~ abnf
-app-string-ip = IPaddress ["/" uint]
+app-string-ip = ip-prefixes SQUOTE IPaddress ["/" uint] SQUOTE
+ip-prefixes   = %s"ip" / %s"IP"
 
 IPaddress     = IPv4address
               / IPv6address
@@ -1874,115 +1839,6 @@ uint          = "0" / DIGIT1 *DIGIT
 ~~~
 {: #abnf-grammar-ip sourcecode-name="cbor-edn-ext-ip.abnf"
 title="ABNF Definition of Textual Representation of an IP Address"}
-
-
-### cri: ABNF Definition of URI Representation of a CRI {#cri-grammar}
-
-It can be expected that implementations of the application-extension
-identifier "`cri`" will make use of platform-provided URI
-implementations, which will include a URI parser.
-
-In case such a URI parser is not available or inconvenient to
-integrate,
-a grammar of the content of `cri` literals is provided by the
-ABNF for `URI-reference` in {{Section 4.1 of RFC3986@-uri}} with certain
-re-arrangements taken from {{ip-grammar}};
-these are reproduced in {{abnf-grammar-cri}}.
-If the content is not ASCII only (i.e., for IRIs), first apply
-{{Section 3.1 of RFC3987}} and apply this grammar to the result.
-
-~~~ abnf
-app-string-cri = URI-reference
-; ABNF from RFC 3986:
-
-URI           = scheme ":" hier-part [ "?" query ] [ "#" fragment ]
-
-hier-part     = "//" authority path-abempty
-                 / path-absolute
-                 / path-rootless
-                 / path-empty
-
-URI-reference = URI / relative-ref
-
-absolute-URI  = scheme ":" hier-part [ "?" query ]
-
-relative-ref  = relative-part [ "?" query ] [ "#" fragment ]
-
-relative-part = "//" authority path-abempty
-                 / path-absolute
-                 / path-noscheme
-                 / path-empty
-
-scheme        = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
-
-authority     = [ userinfo "@" ] host [ ":" port ]
-userinfo      = *( unreserved / pct-encoded / sub-delims / ":" )
-host          = IP-literal / IPv4address / reg-name
-port          = *DIGIT
-
-IP-literal    = "[" ( IPv6address / IPvFuture  ) "]"
-
-IPvFuture     = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
-
-; Use IPv6address, h16, ls32, IPv4adress, dec-octet as re-arranged
-; for PEG Compatibility in Figure 6 of [RFC XXXX]:
-
-IPv6address   =                            6( h16 ":" ) ls32
-              /                       "::" 5( h16 ":" ) ls32
-              / [ h16               ] "::" 4( h16 ":" ) ls32
-              / [ h16 *1( ":" h16 ) ] "::" 3( h16 ":" ) ls32
-              / [ h16 *2( ":" h16 ) ] "::" 2( h16 ":" ) ls32
-              / [ h16 *3( ":" h16 ) ] "::"    h16 ":"   ls32
-              / [ h16 *4( ":" h16 ) ] "::"              ls32
-              / [ h16 *5( ":" h16 ) ] "::"              h16
-              / [ h16 *6( ":" h16 ) ] "::"
-
-h16           = 1*4HEXDIG
-ls32          = ( h16 ":" h16 ) / IPv4address
-IPv4address   = dec-octet "." dec-octet "." dec-octet "." dec-octet
-dec-octet     = "25" %x30-35         ; 250-255
-              / "2" %x30-34 DIGIT    ; 200-249
-              / "1" 2DIGIT           ; 100-199
-              / %x31-39 DIGIT        ; 10-99
-              / DIGIT                ; 0-9
-
-reg-name      = *( unreserved / pct-encoded / sub-delims )
-
-path          = path-abempty    ; begins with "/" or is empty
-                 / path-absolute   ; begins with "/" but not "//"
-                 / path-noscheme   ; begins with a non-colon segment
-                 / path-rootless   ; begins with a segment
-                 / path-empty      ; zero characters
-
-path-abempty  = *( "/" segment )
-path-absolute = "/" [ segment-nz *( "/" segment ) ]
-path-noscheme = segment-nz-nc *( "/" segment )
-path-rootless = segment-nz *( "/" segment )
-path-empty    = 0<pchar>
-
-segment       = *pchar
-segment-nz    = 1*pchar
-segment-nz-nc = 1*( unreserved / pct-encoded / sub-delims / "@" )
-                 ; non-zero-length segment without any colon ":"
-
-pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
-
-query         = *( pchar / "/" / "?" )
-
-fragment      = *( pchar / "/" / "?" )
-
-pct-encoded   = "%" HEXDIG HEXDIG
-
-unreserved    = ALPHA / DIGIT / "-" / "." / "_" / "~"
-reserved      = gen-delims / sub-delims
-gen-delims    = ":" / "/" / "?" / "#" / "[" / "]" / "@"
-sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
-                 / "*" / "+" / "," / ";" / "="
-~~~
-{: #abnf-grammar-cri sourcecode-name="cbor-edn-ext-cri.abnf"
-title="ABNF Definition of URI Representation of a CRI"
-}
-
 
 
 ABNF Definitions for Integrated Extension Parsers {#integrated-grammars}
@@ -2073,98 +1929,6 @@ be written as a separate activity or also automatically derived.
 At the time of writing, one example for a tool performing such a
 derivation is available as open-source software {{ABNFROB}}.
 
-### h'': ABNF Definition of Integrated Parser {#sq-h-grammar}
-
-With glue ABNF similar to that in {{abnf-grammar-sq-glue}} and common
-definitions in Figures {{<abnf-grammar-ext-common}} and {{<abnf-grammar-sq}}, ABNF such as
-that shown in {{abnf-grammar-sq-h}} can be used as an integrated parser
-for `h` prefixed single-quote strings.
-
-~~~ abnf
-sq-app-string-h = %s"h'" s-app-string-h "'"
-s-app-string-h = h-S *(HEXDIG h-S HEXDIG h-S / ellipsis h-S)
-    ["#" *(i-non-lf)]
-
-h-S = *(i-blank) *(h-comment *(i-blank))
-h-non-slash = i-blank / %x21-26 / "\'" / %x28-2e
-            / %x30-5b / "\\" / %x5d-7f / i-NONASCII
-h-comment = "/" *(h-non-slash) "/"
-          / "#" *(i-non-lf) i-LF
-~~~
-{: #abnf-grammar-sq-h sourcecode-name="cbor-edn-int-hsq.abnf"
-title="ABNF Definition for Integrated Hex Parser"
-}
-
-
-### b64'': ABNF Definition of Integrated Parser {#sq-b64-grammar}
-
-With glue ABNF similar to that in {{abnf-grammar-sq-glue}} and common
-definitions in Figures {{<abnf-grammar-ext-common}} and {{<abnf-grammar-sq}}, ABNF such as
-that shown in {{abnf-grammar-sq-b64}} can be used as an integrated parser
-for `b64` prefixed single-quote strings.
-
-~~~ abnf
-sq-app-string-b64 = %s"b64'" s-app-string-b64 "'"
-s-app-string-b64  = b64-S *(4(b64dig b64-S))
-                  [b64dig b64-S b64dig b64-S
-                   ["=" b64-S "=" / b64dig b64-S ["="]] b64-S]
-                  ["#" *i-non-lf]
-b64dig          = ALPHA / DIGIT / "-" / "_" / "+" / "/"
-b64-S           = *i-blank *(b64-comment *i-blank)
-b64-comment     = "#" *i-non-lf %x0A
-~~~
-{: #abnf-grammar-sq-b64 sourcecode-name="cbor-edn-int-b64sq.abnf"
-title="ABNF Definition for Integrated Base64 Parser"
-}
-
-
-### h``: ABNF Definition of Integrated Parser {#sq-h-raw-grammar}
-
-With glue ABNF similar to that in {{abnf-grammar-sq-glue}} and common
-definitions in Figures {{<abnf-grammar-ext-common}}, {{<abnf-grammar-sq}}
-and
-{{<abnf-grammar-rs}}, ABNF such as that shown in {{abnf-grammar-rs-h}} can
-be used as an integrated parser for ``` h ``` prefixed raw strings.
-
-~~~ abnf
-raw-app-string-h = %s"h" startrawdelim r-app-string-h
-r-app-string-h = rh-S *(HEXDIG rh-S HEXDIG rh-S / ellipsis rh-S)
-    ("#" *(r-non-lf) matchrawdelim / fitrawdelim)
-rh-S = *(lblank) *(rh-comment *(lblank))
-rh-non-slash = lblank / %x21-2e / %x30-5f / %x61-7f
-             / NONASCII / shortrawdelim
-rh-comment = "/" *(rh-non-slash) "/"
-           / "#" *(r-non-lf) %x0A
-~~~
-{: #abnf-grammar-rs-h sourcecode-name="cbor-edn-int-hraw.abnf"
-title="ABNF Definition for Integrated Raw String Hex Parser"
-}
-
-
-### b64``: ABNF Definition of Integrated Parser {#sq-b64-raw-grammar}
-
-With glue ABNF similar to that in {{abnf-grammar-sq-glue}}, common
-definitions in Figures {{<abnf-grammar-ext-common}}, {{<abnf-grammar-sq}}
-and {{<abnf-grammar-rs}} as well as the rule
-`b64dig` from {{abnf-grammar-sq-b64}}, ABNF such as
-that shown in {{abnf-grammar-rs-b64}} can be used as an integrated parser
-for ``` b64 ``` prefixed raw strings.
-
-
-~~~ abnf
-raw-app-string-b64 = %s"b64" startrawdelim r-app-string-b64
-r-app-string-b64  = rb64-S *(4(b64dig rb64-S))
-                  [b64dig rb64-S b64dig rb64-S
-                   ["=" rb64-S "=" / b64dig rb64-S ["="]] rb64-S]
-                  ("#" *r-non-lf matchrawdelim / fitrawdelim)
-rb64-S           = *lblank *(rb64-comment *lblank)
-rb64-comment     = "#" *r-non-lf %x0A
-~~~
-{: #abnf-grammar-rs-b64 sourcecode-name="cbor-edn-int-b64raw.abnf"
-title="ABNF Definition for Integrated Raw String Base64 Parser"
-}
-
-
 
 IANA Considerations {#sec-iana}
 ===================
@@ -2232,7 +1996,6 @@ initial entries have the Change Controller "IETF".
 | dt                               | Date/Time                       | RFC-XXXX         |
 | ip                               | IP Address/Prefix               | RFC-XXXX         |
 | hash                             | Cryptographic Hash              | RFC-XXXX         |
-| cri                              | Constrained Resource Identifier | RFC-XXXX, {{-cri}} |
 {: #tab-iana title="Initial Content of Application-extension
 Identifier Registry"}
 
