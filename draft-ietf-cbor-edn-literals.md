@@ -350,7 +350,7 @@ configured to some basic output format, which:
 
 * looks like JSON where that is possible;
 * inserts encoding indicators only where the binary form differs from
-  preferred encoding;
+  preferred serialization;
 * uses hexadecimal representation (`h''`) for byte strings, not
   `b64''` or embedded CBOR (`<<>>`);
 * does not generate elaborate blank space (newlines, indentation) for
@@ -659,14 +659,18 @@ different row.
 |------------------------------------------------|---------------------|
 | `4711`, `0x1267`, `0o11147`, `0b1001001100111` | `19 1267` # uint    |
 | `1.5`, `0.15e1`, `15e-1`, `0x1.8p0`, `0x18p-4` | `F9 3E00` # float16 |
-| `0`, `+0`, `-0`                                | `00     ` # uint     |
+| `0`, `+0`, `-0`                                | `00     ` # uint    |
 | `0.0`, `+0.0`                                  | `F9 0000` # float16 |
 | `-0.0`                                         | `F9 8000` # float16 |
+| `Infinity`                                     | `F9 7C00` # float16 |
+| `-Infinity`                                    | `F9 FC00` # float16 |
+| `NaN`                                          | `F9 7E00` # float16 |
 {: #tab-numbers title="Example Sets of Equivalent Notations for Some Numbers"}
 
 The non-finite floating-point values `Infinity`, `-Infinity`, and `NaN` are
 written exactly as in this sentence (this is also a way they can be
 written in JavaScript, although JSON does not allow them).
+`NaN` in EDN is represented as 0xF97E00 in CBOR preferred serialization.
 
 See {{decnumber}} for additional details of the EDN number syntax.
 
@@ -1118,7 +1122,7 @@ encoding of the tag head.  For example:
 {: indent='5'}
 1_1(1363896240)
 
-(assuming preferred encoding for the tag content) is encoded as
+(assuming preferred serialization for the tag content) is encoded as
 
 ~~~ cbor-pretty
 d9 0001        # tag(1)
