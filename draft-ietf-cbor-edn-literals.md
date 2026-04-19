@@ -1813,12 +1813,13 @@ ellipsis        = 3*"."
 non-slash       = lblank / %x21-2e / %x30-7f / NONASCII
 non-slash-star  = lblank / %x21-29 / %x2b-2e / %x30-7f / NONASCII
 non-star        = lblank / %x21-29 / %x2b-7f / NONASCII
-end-star        = *non-star 1*"*"
+ends-in-star    = *non-star 1*"*"
 non-lf          = %x20-7f / NONASCII
 eol-comment     = "#" / "//"
 S               = *lblank *(comment *lblank)
 comment         = "/" non-slash-star *non-slash "/"
-                / "/*" end-star *(non-slash-star end-star) "/"
+                / "/*" ends-in-star
+                       *(non-slash-star ends-in-star) "/"
                 / eol-comment *non-lf %x0A
 ~~~
 {: #abnf-grammar-h sourcecode-name="cbor-edn-ext-h.abnf"
@@ -2139,9 +2140,10 @@ h-non-slash-star = i-blank / %x21-26 / "\'" / %x28-29 / %x2b-2e
                  / %x30-5b / "\\" / %x5d-7f / i-NONASCII
 h-non-star = i-blank / %x21-26 / "\'" / %x28-29 / %x2b-5b
            / "\\" / %x5d-7f / i-NONASCII
-h-end-star = *h-non-star 1*"*"
+h-ends-in-star = *h-non-star 1*"*"
 h-comment = "/" h-non-slash-star *h-non-slash "/"
-          / "/*" h-end-star *(h-non-slash-star h-end-star) "/"
+          / "/*" h-ends-in-star
+                 *(h-non-slash-star h-ends-in-star) "/"
           / eol-comment *i-non-lf i-LF
 ~~~
 {: #abnf-grammar-sq-h sourcecode-name="cbor-edn-int-hsq.abnf"
@@ -2188,9 +2190,10 @@ rh-2 = %x61-7f / NONASCII / shortrawdelim
 rh-non-slash = lblank / %x21-2e / %x30-5f / rh-2
 rh-non-slash-star = lblank / %x21-29 / %x2b-2e / %x30-5f / rh-2
 rh-non-star = lblank / %x21-29 / %x2b-5f / rh-2
-rh-end-star = *rh-non-star 1*"*"
+rh-ends-in-star = *rh-non-star 1*"*"
 rh-comment = "/" rh-non-slash-star *rh-non-slash "/"
-           / "/*" rh-end-star *(rh-non-slash-star rh-end-star) "/"
+           / "/*" rh-ends-in-star
+                  *(rh-non-slash-star rh-ends-in-star) "/"
            / eol-comment *r-non-lf %x0A
 ~~~
 {: #abnf-grammar-rs-h sourcecode-name="cbor-edn-int-hraw.abnf"
