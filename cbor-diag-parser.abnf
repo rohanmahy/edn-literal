@@ -27,7 +27,7 @@ simple          = %s"false"
                 / %s"null"
                 / %s"undefined"
                 / %s"simple(" S simple-number S ")"
-simple_number   = "25" %x30-35         ; 250-255
+simple-number   = "25" %x30-35         ; 250-255
                 / "2" %x30-34 DIGIT    ; 200-249
                 / "1" 2DIGIT           ; 100-199
                 / %x34-39 DIGIT        ; 40-99
