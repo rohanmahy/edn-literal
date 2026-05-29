@@ -172,33 +172,6 @@ It also defines a new application-oriented literal that represents cryptographic
 
 Finally, this document registers a media type identifier and a content-format for CBOR diagnostic notation.
 
-## Structure of This Document
-
-{{diagnostic-notation}} of this document has been built from {{Section 8
-of RFC8949@-cbor}} and {{Section G of RFC8610}}.
-The latter provided a number of useful extensions to the initial
-diagnostic notation that was originally defined in {{Section 6 of -old-cbor}}.
-{{Section 8 of RFC8949@-cbor}} and {{Section G of RFC8610}} have
-collectively been called "Extended Diagnostic Notation" (EDN), giving
-the present document its name.
-
-After introductory material, {{app-ext}}
-illustrates the concept of application-oriented extension literals by
-defining the "dt", "ip", "hash", and "cri" extensions.
-{{stand-in}} defines mechanisms
-for dealing with unknown application-oriented literals and
-deliberately elided information.
-{{grammars}} gives the formal syntax of EDN in ABNF, with
-explanations for some features of and additions to this syntax, as an
-overall grammar ({{grammar}}) and specific grammars for the content of
-app-string and byte-string literals ({{app-grammars}}).
-This is followed by the conventional sections
-for
-{{<<sec-iana}} ({{<sec-iana}}),
-{{<<seccons}} ({{<seccons}}),
-and References ({{<sec-normative-references}}, {{<sec-informative-references}}).
-An informational comparison of EDN with CDDL follows in
-{{edn-and-cddl}}.
 
 ## Terminology and Conventions {#terminology}
 
