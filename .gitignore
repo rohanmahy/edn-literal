@@ -19,6 +19,7 @@
 Gemfile.lock
 archive.json
 draft-ietf-cbor-edn-literals.xml
+draft-mahy-cbor-edn-alternative.xml
 package-lock.json
 report.xml
 !requirements.txt

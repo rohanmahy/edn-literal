@@ -19,7 +19,7 @@ author:
   -
     ins: R. Mahy
     fullname: Rohan Mahy
-    role: Editor
+    role: editor
     email: "rohan.ietf@gmail.com"
 
 contributor:
