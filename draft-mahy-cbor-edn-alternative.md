@@ -1,9 +1,8 @@
 ---
 v: 3
-
-title: >
-  CBOR Extended Diagnostic Notation (EDN)
-docname: draft-ietf-cbor-edn-literals-latest
+title: "CBOR Extended Diagnostic Notation (EDN)"
+abbrev: "EDN"
+docname: draft-mahy-cbor-edn-alternative-latest
 # date: 2026-04-06
 
 keyword: Internet-Draft
@@ -17,6 +16,13 @@ kramdown_options:
   ol_start_at_first_marker: true
 
 author:
+  -
+    ins: R. Mahy
+    fullname: Rohan Mahy
+    role: Editor
+    email: "rohan.ietf@gmail.com"
+
+contributor:
   -
     ins: C. Bormann
     name: Carsten Bormann
