@@ -5,7 +5,10 @@ abbrev: "EDN"
 docname: draft-mahy-cbor-edn-alternative-latest
 # date: 2026-04-06
 
-keyword: Internet-Draft
+keyword:
+  - cbor-diag
+  - diagnostic notation
+  - extended diagnostic notation
 cat: std
 stream: IETF
 consensus: true
@@ -2731,6 +2734,10 @@ Important differences include:
 Acknowledgements
 ================
 {: numbered="no"}
+
+This document is a heavy-handed rewrite of {{?I-D.ietf-cbor-edn-literals}}.
+Much of the text was originally written by Carsten Bormann.
+He is listed as a contributor rather than an author because he likely does not agree with the editorial choices made in this document.
 
 The concept of application-oriented extensions to diagnostic notation,
 as well as the definition for the "dt" extension, were inspired by the
