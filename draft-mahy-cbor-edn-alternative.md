@@ -1,6 +1,6 @@
 ---
 v: 3
-title: "CBOR Extended Diagnostic Notation (EDN)"
+title: "Extended Diagnostic Notation (EDN) for CBOR"
 abbrev: "EDN"
 docname: draft-mahy-cbor-edn-alternative-latest
 # date: 2026-04-06
@@ -43,7 +43,7 @@ venue:
   latest: "https://cbor-wg.github.io/edn-literal/"
 
 normative:
-  STD94: cbor
+  RFC8949: cbor
   RFC8742: seq
   STD68: abnf
   STD63: utf8
@@ -104,7 +104,7 @@ informative:
   RFC7049: old-cbor
   RFC4648: base
   RFC9290: pd
-  STD90: json
+  RFC8259: json
   RFC7493: i-json
   I-D.bormann-cbor-numbers: numbers
   RFC9165: controls
@@ -131,118 +131,46 @@ informative:
 
 --- abstract
 
-This document formalizes and consolidates the definition of the Extended
-Diagnostic Notation (EDN) of the Concise Binary Object Representation
-(CBOR), addressing implementer experience.
+This document formalizes a standalone definition of the Extended
+Diagnostic Notation (EDN) for the Concise Binary Object Representation
+(CBOR), addressing new requirements from the implementer community.
+It also explicitly defines new extension points with registries and includes a few straightforward extensions.
 
-Replacing EDN's previous informal descriptions, it updates
-RFC 8949, obsoleting its Section 8, and RFC 8610, obsoleting its
-Appendix G.
-
-It also specifies registry-based extension points and uses them
-to support text representations such as of epoch-based dates/times and of IP
-addresses and prefixes.
-
-[^status]
-
-[^status]:
-    (This cref will be removed by the RFC editor:)\\
-    The present `-25` is intended as reference material during the
-    2026-05-13 CBOR interim.
-    It corrects a clerical error in `-24`, which completes the work
-    started in PR #102 and adds a couple of paragraphs on editorial
-    conventions.
-    It does not yet consider the various proposals about updating the names
-    given for this specification and its instances.
+> This is a rewritten version of draft-ietf-cbor-edn-literals.
+> It is intended to be clearer for implementers and more concise.
 
 --- middle
 
-Introduction        {#intro}
-============
+# Introduction        {#intro}
 
-The Concise Binary Object Representation (CBOR) (RFC8949) {{STD94}}
-    is a data format whose design goals include the possibility of
-    extremely small code size, fairly small message size, and
-    extensibility without the need for version negotiation.
-In addition to the binary interchange format, the original CBOR specification
-    described a text-based "diagnostic notation" ({{Section 6 of
-    RFC7049}}, now {{Section 8 of RFC8949@-cbor}}), in
-    order to be able to converse about CBOR data items without having
-    to resort to binary data.
-{{Appendix G of -cddl}} extended this into what is also known as
-Extended Diagnostic Notation (EDN).
+CBOR {{RFC8949}} is a binary, self-delimiting data format.
+In addition to its binary interchange format, the original CBOR specification described a text-based "diagnostic notation" ({{Section 6 of RFC7049}}, then {{Section 8 of RFC8949@-cbor}}), to enable simpler discussions of CBOR data items.
+{{Appendix G of -cddl}} extended this into the Extended Diagnostic Notation (EDN).
 
-Diagnostic notation syntax is based on JSON, with extensions
-for representing CBOR constructs such as binary data and tags.
+Diagnostic notation syntax is based on JSON {{RFC8259}}, with additional syntax to represent other CBOR constructs such as binary data and tags, and support for convenient features such as comments.
 
-Standardizing EDN in addition to the actual binary interchange format CBOR does
-not serve to create a competing interchange format, but enables the use of
-a shared diagnostic notation in tools for and in documents about CBOR.
-Still, between tools for CBOR development and diagnosis, document
-generation systems, continuous integration (CI)
-environments, configuration files, and user interfaces for viewing and
-editing for all these, EDN is often "interchanged" and therefore
-merits a specification that facilitates interoperability within this
-domain as well as reliable translation to and from CBOR.
-EDN is not designed or intended for general-purpose use in protocol
-elements exchanged between systems engaged in processes outside those
-listed here.
+EDN is not intended as a general-purpose interchange format, but rather a textual representation of a binary data format.
+EDN enables unambiguous generation of diagnostics about CBOR data.
+It is also useful for documentation about CBOR, CBOR development, document generation systems, continuous integration (CI) environments, configuration files, and user interfaces for viewing and editing for all these.
+EDN therefore merits a specification that facilitates interoperability of these tools, especially reliable translation to and from CBOR data.
 
-​This document consolidates and formalizes the definition of EDN,
-providing a formal grammar (see {{grammar}} and {{app-grammars}}), and
-incorporating small changes based on implementation experience.
-It updates {{RFC8949}}, obsoleting {{Section 8 of RFC8949@-cbor}}, and
-{{-cddl}}, obsoleting {{Appendix G of -cddl}}.
-It is intended to serve as a single reference target that can be used
-in specifications that use EDN.
+> It is also possible to represent CBOR data items using other text formats, such as {{YAML}} using YAML extensions.
+> However, EDN natively includes support for all CBOR data types.
 
-It also specifies two registry-based extension points for the
-diagnostic notation:
-one for additional encoding indicators, and
-one for adding application-oriented literal forms.
-It uses these registries to add encoding indicators for a more
-complete coverage of encoding variation,
-and to add application-oriented literal forms that enhance EDN with text
-representations of epoch-based date/times, of IP addresses
-and prefixes {{-iptag}}, and of Concise Resource Identifiers (CRI
-{{-cri}}), as well as an application-oriented literal that
-represents cryptographic hash values computed from byte strings.
+This document replaces previous definitions of EDN, and defines a formal grammar (see {{grammar}} and {{app-grammars}}), incorporating features requested by the community.
+It obsoletes {{Section 8 of RFC8949@-cbor}}, and {{Appendix G of -cddl}}.
 
-In addition, this document registers a media type identifier
-and a content-format for CBOR diagnostic notation.  This does not
-elevate its status as an interchange format, but recognizes that
-interaction between tools is often smoother if media types can be used.
+It also specifies two registry-based extension points for the diagnostic notation: one for encoding indicators, and one for application-oriented literal forms.
 
-{:aside}
->
-> Examples in RFCs often do not use media type identifiers, but
-> special sourcecode type names that are allocated
-> in <https://www.rfc-editor.org/materials/sourcecode-types.txt>.
-> At the time of writing, this resource lists four sourcecode type
-> names that can be used in RFCs for including CBOR data items and
-> CBOR-related languages:
->
-> * `cbor` (which is actually not useful, as CBOR is a binary format
->   and cannot be used in textual examples in an RFC),
-> * `cbor-diag` (which is another name for EDN, as defined in the
->   present document),
-> * `cbor-pretty` (which is a possibly annotated and pretty-printed
->   hexdump of an encoded CBOR data item, along the lines of the
->   grammar of {{h-grammar}}, as used for instance for some of the examples
->   in {{Section A.3 of RFC9290}}), and
-> * `cddl` (which is used for the Concise Data Definition Language,
->   CDDL, see {{terminology}} below).
+It includes one new encoding indicator and the following (application-oriented literal form) extensions for text representations of:
 
-Note that EDN is not meant to be the only text-based representation of
-CBOR data items.
-For instance, {{YAML}} {{-yaml-media-type}} is able to represent most CBOR
-data items, possibly requiring use of YAML's extension points.
-YAML does not provide certain features that can be useful with tools
-and documents needing text-based representations of CBOR data items
-(such as embedded CBOR or encoding indicators),
-but it does provide a host of other features that EDN does not provide
-such as anchor/alias data sharing, at a cost of higher implementation
-and learning complexity.
+- epoch-based date/times,
+- IP addresses and prefixes {{-iptag}}, and of
+- Concise Resource Identifiers (CRI) {{-cri}}.
+
+It also defines a new application-oriented literal that represents cryptographic hash values computed from byte strings.
+
+Finally, this document registers a media type identifier and a content-format for CBOR diagnostic notation.
 
 ## Structure of This Document
 
@@ -423,7 +351,7 @@ Recognizing that formal grammars can aid interoperation of tools and
 usability of documents that employ EDN, {{grammars}} now provides ABNF
 definitions.
 
-EDN is a true superset of JSON as it is defined in {{STD90}} in
+EDN is a true superset of JSON as it is defined in {{RFC8259}} in
 conjunction with {{-i-json}} (that is, any interoperable {{-i-json}} JSON
 text also is an EDN text), extending it both to cover the greater
 expressiveness of CBOR and to increase its usability.
