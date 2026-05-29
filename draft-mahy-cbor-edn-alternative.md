@@ -12,7 +12,7 @@ keyword:
 cat: std
 stream: IETF
 consensus: true
-updates: 8610, 8949
+updates: 8610, 8742, 8949
 
 pi: [toc, sortrefs, symrefs, compact, comments]
 kramdown_options:
@@ -158,7 +158,7 @@ EDN therefore merits a specification that facilitates interoperability of these 
 > However, EDN natively includes support for all CBOR data types.
 
 This document replaces previous definitions of EDN, and defines a formal grammar (see {{grammar}} and {{app-grammars}}), incorporating features requested by the community.
-It obsoletes {{Section 8 of RFC8949@-cbor}}, and {{Appendix G of -cddl}}.
+It obsoletes {{Section 8 of RFC8949@-cbor}}, {{Section 4.2 of RFC8742}}, and {{Appendix G of -cddl}}.
 
 It also specifies two registry-based extension points for the diagnostic notation: one for encoding indicators, and one for application-oriented literal forms.
 
@@ -173,43 +173,13 @@ It also defines a new application-oriented literal that represents cryptographic
 Finally, this document registers a media type identifier and a content-format for CBOR diagnostic notation.
 
 
-## Terminology and Conventions {#terminology}
+# Terminology and Conventions {#terminology}
 
-{{Section 8 of RFC8949@-cbor}} defines the original CBOR diagnostic notation,
-and {{Appendix G of -cddl}} supplies a number of extensions to the
-diagnostic notation that result in the Extended Diagnostic Notation
-(EDN).
-The diagnostic notation extensions include popular features such as
-embedded CBOR (encoded CBOR data items in byte strings) and comments.
-A simple diagnostic notation extension that enables representing CBOR
-sequences was added in {{Section 4.2 of -seq}}.
-As diagnostic notation is not used in the kind of interchange
-situations where backward compatibility would pose a significant
-obstacle, there is little point in not using these extensions; as at
-least some elements of the extended form are now near-universally
-used, the terms "diagnostic notation" and "EDN" have become
-synonyms in the context of CBOR.
+{{Section 8 of RFC8949@-cbor}} includes a definition of the original CBOR "diagnostic notation".
+{{Appendix G of -cddl}} added popular features such as embedded CBOR and comments; it already refers to the format as "Extended Diagnostic Notation".
 
-Therefore, references to "_diagnostic notation_" generally mean to
-include the original notation from {{Section 8 of RFC8949@-cbor}} as well as the
-extensions from {{Appendix G of -cddl}}, {{Section 4.2 of -seq}}, and the
-present document.
-However, this document sticks to the abbreviation "_EDN_" as it has become quite
-popular and is more sharply distinguishable from other meanings than
-"DN" would be.
-
-In a similar vein, the term "ABNF" in this document refers to the
-language defined in {{-abnf}} as extended in {{-abnfcs}}, where the
+Augmented Backus-Naur Form (ABNF) in this document refers to the language defined in {{-abnf}} as extended in {{-abnfcs}}, where the
 "characters" of {{Section 2.3 of RFC5234@-abnf}} are Unicode scalar values.
-Brief snippets of grammar may be given in the text as I-Regexp regular
-expressions {{-iregexp}}.
-
-The term "CDDL" (Concise Data Definition Language) refers to the data
-definition language defined in
-{{-cddl}} and its registered extensions (such as those documented in
-{{-controls}} and {{-cddlupd}}).
-Additional information about the relationship between the two
-languages EDN and CDDL is captured in {{edn-and-cddl}}.
 
 Examples sometimes need to be quoted in the text, in particular in
 cases where the typewriter font used for example text cannot be
@@ -230,48 +200,34 @@ the surrogate notation seen here in the plain-text rendition.
 
 {::boilerplate bcp14-tagged-bcp14}
 
-## (Non-)Objectives of this Document
+# Objectives of this Document
 
-{{Section 8 of RFC8949@-cbor}} states the objective of defining a
-common human-readable diagnostic notation with CBOR.
-In particular, it states:
+{{Section 8 of RFC8949@-cbor}} describes the objective of defining a common human-readable diagnostic notation for CBOR.
 
-{:quote}
-> All actual interchange always happens in the binary format.
+## Converting CBOR to EDN
 
-### For Humans
+EDN was designed to be able to represent (almost) any legal CBOR data item or sequence.
+Using EDN for debugging or diagnostic purposes allows humans to more easily and efficiently read the structure of CBOR data.
+As such, converting from CBOR to EDN to CBOR should not result in a CBOR document with different data types.
+
+## Converting from EDN to CBOR
+
+Another important use of EDN is for test vectors, examples in specifications, and configuration.
+The benefit of a text representation of this type of informations is to make it easier for humans to read, write, edit, and compare diffs.
+EDN has several different ways of representing the same CBOR values.
+There is absolutely no expectation that converting from EDN to CBOR to EDN will result in the same EDN document.
 
 One important application of EDN is the notation of CBOR data for
-humans: in specifications, on whiteboards, and for entering test data.
-A number of features, such as comments inside prefixed string literals, are mainly
-useful for people-to-people communication via EDN.
+humans: for ease of debugging, in specifications, and for entering test data.
+A number of features of EDN, such as comments are useful for humans to read.
 Programs also often output EDN for diagnostic purposes, such as in
 error messages or to enable comparison (including generation of diffs
 via tools) with test data.
 
-### Determinism?
 
-For comparison with test data, it is often useful if different
-implementations generate the same (or similar) output for the same
-CBOR data items.
-This is comparable to the objectives of deterministic serialization
-for CBOR data items themselves ({{Section 4.2 of RFC8949@-cbor}}).
-However, there are even more representation variants in EDN than in
-binary CBOR, and there is little point in specifically endorsing a
-single variant as "deterministic" when other variants may be more
-useful for human understanding, e.g., the `<< >>` notation as
-opposed to `h''`; an EDN generator may have quite a few options
-that control what presentation variant is most desirable for the
-application that it is being used for.
+# Basic Output Format {#basic}
 
-Because of this, a deterministic representation is not defined for
-EDN, and there is no expectation for "roundtripping" from EDN to
-CBOR and back, i.e., for an ability
-to convert EDN to binary CBOR and back to EDN while achieving exactly
-the same result as the original input EDN — the original EDN possibly
-was created by humans or by a different EDN generator.
-
-### Basic Output Format {#basic}
+> **TODO**: Move this section
 
 However, there is a certain expectation that EDN generators can be
 configured to some basic output format, which:
