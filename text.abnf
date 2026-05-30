@@ -15,4 +15,3 @@ escapable-d     = escapable1
                 / DQUOTE
                 / "/"   ; / slash (solidus) U+002F (JSON!)
                 / (%s"u" hexchar) ;  uXXXX      U+XXXX
-

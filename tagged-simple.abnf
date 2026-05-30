@@ -2,7 +2,6 @@ uint            = "0" / DIGIT1 *DIGIT  ; valid up to 2^64 - 1
 DIGIT1          = %x31-39 ; 1-9
 tagged          = uint spec "(" S item S ")"
 
-
 simple          = %s"false"
                 / %s"true"
                 / %s"null"

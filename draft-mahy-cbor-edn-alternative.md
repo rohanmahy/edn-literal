@@ -1402,7 +1402,23 @@ ABNF definition in this document would therefore not have been based on
 implementation experience.
 
 ~~~ abnf
-{::include cbor-diag-parser.abnf}
+{::include top-level.abnf}
+
+{::include collections.abnf}
+
+{::include tagged-simple.abnf}
+
+{::include numbers.abnf}
+
+{::include bytes.abnf}
+
+{::include text.abnf}
+
+{::include app-ext.abnf}
+
+{::include comments.abnf}
+
+{::include scraps.abnf}
 ~~~
 {: #abnf-grammar title="Overall ABNF Definition of CBOR EDN"
    sourcecode-name="cbor-edn.abnf"}
