@@ -222,11 +222,12 @@ Below is a summary of the key features of EDN:
 - map keys can be any type;
 - string concatenation;
 - binary strings conveyed like text, hexadecimal, or base64;
-- extension types (app-strings and app-sequences);
+- application extensions (app-strings and app-sequences);
 - comments;
 - embedded CBOR;
 - more number formats (ex: hexadecimal, octal, binary);
-- support for non-finite floating point values; and
+- support for non-finite floating point values;
+- optional and trailing commas in arrays, maps, and sequences; and
 - CBOR encoding indicators.
 
 These feature will be described in subsequent sections.
@@ -237,6 +238,35 @@ In addition to starting with a single EDN value, top-level array or map, EDN can
 
 ## EDN Structure and Types
 
+An EDN text consists of a sequence of zero or more EDN items.
+Supported EDN types are:
+
+- numbers,
+- byte strings,
+- text strings,
+- arrays,
+- maps,
+- tagged values,
+- simple values,
+- ellipses, and
+- application extensions.
+
+Ellipses signal that an item or items that was or should be present was elided (left out) of the EDN text at that location as described in {{elision}}.
+Parts of text and byte strings can also be elided.
+
+Application extensions consist of app-strings and app-sequences, as shown in the example table below:
+
+| Ext Type     | Example        | CBOR type   | CBOR value |
+|:-------------|:---------------|:------------|:-----------|
+| app-string   | `b64'aGVsbG8'` | byte string | `'hello'`  |
+| app-string   | `dt'1970-01-01T00:00:12Z'` | integer | `12` (seconds since UNIX epoch) |
+| app-sequence | `hash<<"hello", -15>>` | byte string | `h'2cf24dba5fb0a30e'` |
+
+The following ABNF {{-abnf}} describes the top-level structure of EDN:
+
+~~~ abnf
+{::include top-level.abnf}
+~~~
 
 
 

@@ -1,0 +1,6 @@
+seq             = S [item *(MSC item) SOC]
+one-item        = S item S
+item            = map / array / tagged
+                / number / simple / app-extension
+                / bytes / text / ellipsis
+ellipsis        = 3*"."       ; "..." (or more dots)
