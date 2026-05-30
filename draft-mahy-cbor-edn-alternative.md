@@ -2185,12 +2185,25 @@ parameters controlling such an extension.
 
 --- back
 
+# Changes from draft-ietf-cbor-edn-literals-25
+
+- Normative
+  - Removed raw (backtick-quoted) literals
+  - Removed stand-in representation
+  - Now also obsoletes Section 4.2 of RFC8742
+
+- Non-normative
+  - Modified author / contributor list and Acknowlegements
+  - Removed Structure of This Document section
+  - Removed Appendix A (CDDL comparison to EDN)
+  - Rewrote Abstract and Introduction
+  - Simplified the Terminology / Conventions section
+
 
 {::include-all lists.md}
 
 
-Acknowledgements
-================
+# Acknowledgements
 {: numbered="no"}
 
 This document is a heavy-handed rewrite of {{?I-D.ietf-cbor-edn-literals}}.
