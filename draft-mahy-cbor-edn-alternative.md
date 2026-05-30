@@ -1328,90 +1328,12 @@ is equivalent to
 See {{cri-grammar}} for an ABNF definition for the content of `cri` literals.
 
 
-Stand-in Representations in Binary CBOR {#stand-in}
-=======================================
-
-In some cases, an EDN consumer cannot construct actual CBOR items that
-represent the CBOR data intended for eventual interchange.
-This document defines stand-in representation for two such cases:
-
-* The EDN consumer does not know (or does not implement) an
-  application-extension identifier used in the EDN document
-  ({{unknown}}) but wants to preserve the information for a later
-  processor.
-
-* The generator of some EDN intended for human consumption (such as in
-  a specification document) may not want to include parts of the final
-  data item, destructively replacing complete subtrees or possibly
-  just parts of a lengthy string by _elisions_ ({{elision}}).
-
-{:aside}
->
-Implementation note:
-Typically, the ultimate applications will fail if they encounter tags
-unknown to them, which the ones defined in this section likely are.
-Where chains of tools are involved in processing EDN, it may be useful
-to fail earlier than at the ultimate receiver in the chain unless
-specific processing options (e.g., command line flags) are given that
-indicate which of these stand-ins are expected at this stage in the
-chain.
-
-Handling unknown application-extension identifiers {#unknown}
---------------------------------------------------
-
-When ingesting CBOR diagnostic notation, any
-application-oriented extension literals are usually decoded and
-transformed into the corresponding data item during ingestion.
-If an application-extension is not known or not implemented by the
-ingesting process, this is usually an error and processing has to
-stop.
-
-However, in certain cases, it can be desirable to exceptionally carry an
-uninterpreted application-oriented extension literal in an ingested
-data item, allowing to postpone its decoding to a specific later
-stage of ingestion.
-
-This specification defines a CBOR Tag for this purpose:
-The Diagnostic Notation Unresolved Application-Extension Tag, tag
-number CPA999 ({{iana-standin}}).
-The content of this tag is an array of a text string for the
-application-extension identifier, and another array:
-
-* For app-strings, the second array contains a single item, a text
-string containing the text notated by the single-quoted string in the
-app-string.
-* For app-sequences, the second array contains zero or more items,
-which represent each item in the sequence contained in the
-app-sequence.
-
-For example, `cri'https://example.com'` can be represented as
-`/CPA/ 999(["cri", ["https://example.com"]])`, or
-`hash<<"data", -44>>` as `/CPA/ 999(["hash", ["data", -44]])`.
-
-<!-- edn-abnf -fe "cri'https://example.com'" -->
-<!-- edn-abnf -fe 'hash<<"data", -44>>' -->
-
-If a stage of ingestion is not prepared to handle the Unresolved
-Application-Extension Tag, this is an error and processing has to
-stop, as if this stage had been ingesting an unknown or unimplemented
-application-extension literal itself.
-
-[^cpa]
-
-[^cpa]: RFC-Editor: This document uses the CPA (code point allocation)
-      convention described in [I-D.bormann-cbor-draft-numbers].  For
-      each usage of the term "CPA", please remove the prefix "CPA"
-      from the indicated value and replace the residue with the value
-      assigned by IANA; perform an analogous substitution for all other
-      occurrences of the prefix "CPA" in the document.  Finally,
-      please remove this note.
-
-Handling information deliberately elided from an EDN document {#elision}
--------------------------------------------------------------
+# Handling information deliberately elided from an EDN document {#elision}
 
 When using EDN for exposition in a document or on a whiteboard, it is
 often useful to be able to leave out parts of an EDN document that are
 not of interest at that point of the exposition.
+It is also useful in a diagnostic context to view the overall structure of a document without displaying every long data item.
 
 To facilitate this, this specification
 supports the use of an _ellipsis_ (notated as three or more dots
@@ -1419,22 +1341,10 @@ in a row, as in `...`) to indicate parts of an EDN document that have
 been elided (and therefore cannot be reconstructed).
 
 Upon ingesting EDN as a representation of a CBOR data item for further
-processing, the occurrence of an ellipsis usually is an error and
+processing, the occurrence of an ellipsis is an error and
 processing has to stop.
 
-However, it is useful to be able to process EDN documents with
-ellipses in the automation scripts for the documents using them.
-This specification defines a CBOR Tag that can be used in the ingestion
-for this purpose:
-The Diagnostic Notation Ellipsis Tag, tag number CPA888 ({{iana-standin}}).
-The content of this tag either is
-
-1. null (indicating a data item entirely replaced by an ellipsis), or it is
-2. an array, the elements of which are alternating between fragments
-   of a string and the actual elisions, represented as ellipses
-   carrying a null as content.
-
-Elisions can stand in for entire subtrees, e.g. in:
+Elisions can stand in for entire subtrees, for example in:
 
 ~~~ cbor-diag
 [1, 2, ..., 3]
@@ -1445,25 +1355,9 @@ Elisions can stand in for entire subtrees, e.g. in:
 ~~~
 
 A single ellipsis (or key/value pair of ellipses) can imply eliding
-multiple elements in an array (members in a map); if more detailed
-control is required, a data definition language such as CDDL can be
-employed.
-(Note that the stand-in form defined here does not allow multiple
-key/value pairs with an ellipsis as a key: the CBOR data item would
-not be valid.)
+multiple elements in an array (or members in a map)
 
-Subtree elisions can be represented in a CBOR data item by using
-`/CPA/888(null)` as the stand-in:
-
-~~~ cbor-diag
-[1, 2, 888(null), 3]
-{ "a": 1,
-  "b": 888(null),
-  888(null): 888(null)
-}
-~~~
-
-Elisions also can be used as part of a (text or byte) string:
+Elisions also can be used as part of a text string or byte string:
 
 ~~~ cbor-diag
 { "contract": "Herewith I buy" + ... + "gned: Alice & Bob",
@@ -1479,22 +1373,8 @@ The example
 "signature" uses special syntax that allows the use of ellipses
 between the bytes notated _inside_ `h''` literals.
 
-String elisions can be represented in a CBOR data item by a stand-in
-that wraps an array of string fragments alternating with ellipsis
-indicators:
-
-~~~ cbor-diag
-{ "contract": /CPA/888(["Herewith I buy", 888(null),
-                        "gned: Alice & Bob"]),
-  "bytes_in_IRI": 888(['https://a.example/', 888(null),
-                       '&q=Übergrößenträger']),
-  "signature": 888([h'4711', 888(null), h'0815']),
-}
-~~~
-
 Note that the use of elisions is different from "commenting out" EDN
 text, e.g.:
-
 
 ~~~ cbor-diag
 { "signature": h'4711/.../0815',
@@ -1699,9 +1579,7 @@ The following additional items should help in the interpretation:
       Multiple adjacent concatenated ellipses are equivalent to a single
       ellipsis.
     * An ellipsis can be concatenated (on one or both sides) with string
-      chunks (`string1`); the result is a CBOR tag number CPA888 that contains an
-      array with joined together spans of such chunks plus the ellipses
-      represented by `888(null)`.
+      chunks (`string1`).
     * If there is no ellipsis in the concatenated list, the result of
       processing the list will always be a single item.
     * The bytes in the concatenated sequence of string chunks are simply
@@ -2464,20 +2342,6 @@ Parameters" Registry {{IANA.core-parameters}}, as follows:
 TBD1 is to be assigned from the space 256..9999, according to the
 procedure "IETF Review or IESG Approval", preferably a number less
 than 1000.
-
-## Stand-in Tags {#iana-standin}
-
-[^cpa]
-
-In the "CBOR Tags" registry {{-tags}}, IANA is requested to assign the
-tags in {{tab-tag-values}} from the "specification required" space
-(suggested assignments: 888 and 999), with the present document as the
-specification reference.
-
-| Tag    | Data Item     | Semantics                                            | Reference |
-| CPA888 | null or array | Diagnostic Notation Ellipsis                         | RFC-XXXX  |
-| CPA999 | array         | Diagnostic Notation<br>Unresolved Application-Extension | RFC-XXXX  |
-{: #tab-tag-values cols='r l l' title="Values for Tags"}
 
 
 Security considerations {#seccons}
