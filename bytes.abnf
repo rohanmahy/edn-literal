@@ -1,0 +1,43 @@
+                ; only app-string or app-sequence that
+                ; result in byte strings are allowed in bstr
+bstr            = app-string / app-sequence
+                / sqstr / embedded
+embedded        = "<<" seq ">>"
+
+bytes           = bytesrun / bytesstream
+bytesrun        = bytes1 *(S "+" bytes1e)
+bytes1e         = bytes1 / ellipsis
+bytes1          = bstr spec
+bytesstream     = "(_" MS bytesrun *(MSC bytesrun) SOC ")"
+
+sqstr           = SQUOTE *single-quoted SQUOTE
+single-quoted   = unescaped
+                / DQUOTE
+                / "\" escapable-s
+
+; Note that no other C0 characters are allowed, including %x09 HT
+unescaped       = %x0A ; new line
+                / %x0D ; carriage return -- ignored on input
+                / %x20-21
+                     ; omit 0x22 "
+                / %x23-26
+                     ; omit 0x27 '
+                / %x28-5B
+                     ; omit 0x5C \
+                / %x5D-7F
+                / NONASCII
+
+escapable-s     = escapable1
+                / SQUOTE
+                / (%s"u" hexchar-s) ;  uXXXX      U+XXXX
+escapable1      = %s"b" ; BS backspace U+0008
+                / %s"f" ; FF form feed U+000C
+                / %s"n" ; LF line feed U+000A
+                / %s"r" ; CR carriage return U+000D
+                / %s"t" ; HT horizontal tab U+0009
+                / "\"   ; \ backslash (reverse solidus) U+005C
+
+
+DQUOTE          = %x22    ; " double quote
+SQUOTE          = "'"     ; ' single quote
+NONASCII        = %x80-D7FF / %xE000-10FFFF

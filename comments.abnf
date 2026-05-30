@@ -1,0 +1,15 @@
+comment         = "/" non-slash-star *non-slash "/"
+                / "/*" ends-in-star
+                       *(non-slash-star ends-in-star) "/"
+                / eol-comment *non-lf %x0A
+eol-comment     = "#" / "//"
+
+non-slash-star  = blank / %x21-29 / %x2b-2e / %x30-7F / NONASCII
+non-slash       = blank / %x21-2e / %x30-7F / NONASCII
+non-star        = blank / %x21-29 / %x2b-7F / NONASCII
+ends-in-star    = *non-star 1*"*"
+non-lf          = %x09 / %x0D / %x20-7F / NONASCII
+
+; We allow %x09 HT in prose, but not in string literals
+blank           = %x09 / %x0A / %x0D / %x20
+lblank          = %x0A / %x20  ; Not HT or CR (gone)

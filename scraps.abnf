@@ -1,0 +1,44 @@
+;;;;;; Space and Separator Productions ;;;;;;
+; optional space
+S               = *blank *(comment *blank)
+; mandatory space
+MS              = (blank/comment) S
+; mandatory comma and/or space
+MSC             = ("," S) / (MS ["," S])
+; optional comma and/or space
+SOC             = S ["," S]
+
+;;;;;; Unicode Character Productions ;;;;;;
+hexchar         = "{" (1*"0" [ hexscalar ] / hexscalar) "}"
+                / non-surrogate
+                / two-surrogate
+non-surrogate   = ((DIGIT / "A"/"B"/"C" / "E"/"F") 3HEXDIG)
+                / ("D" ODIGIT 2HEXDIG )
+two-surrogate   = high-surrogate "\" %s"u" low-surrogate
+high-surrogate  = "D" ("8"/"9"/"A"/"B") 2HEXDIG
+low-surrogate   = "D" ("C"/"D"/"E"/"F") 2HEXDIG
+hexscalar       = "10" 4HEXDIG / HEXDIG1 4HEXDIG
+                / non-surrogate / 1*3HEXDIG
+
+; single-quote hexchar-s: don't allow 0020..007e
+hexchar-s       = "{" (1*"0" [ hexscalar-s ] / hexscalar-s) "}"
+                / non-surrogate-s
+                / two-surrogate
+non-surrogate-s = "007F"                 ; rubout
+                / "00" ("0"/"1"/"8"/"9"/HEXDIGA) HEXDIG
+                / "0" HEXDIG1 2HEXDIG
+                / non-surrogate-1
+non-surrogate-1 = ((DIGIT1 / "A"/"B"/"C" / "E"/"F") 3HEXDIG)
+                / ("D" ODIGIT 2HEXDIG )
+hexscalar-s     = "10" 4HEXDIG / HEXDIG1 4HEXDIG
+                / non-surrogate-1 / HEXDIG1 2HEXDIG
+                / ("1"/"8"/"9"/HEXDIGA) HEXDIG
+                / "7F"
+                / HEXDIG1
+
+;;;;;; Miscellaneous ;;;;;
+newline         = [%x0D] %x0A
+DIGIT1          = %x31-39 ; 1-9
+HEXDIGA         = "A" / "B" / "C" / "D" / "E" / "F"
+; Note: double-quoted strings as in "A" are case-insensitive in ABNF
+HEXDIG1         = DIGIT1 / HEXDIGA

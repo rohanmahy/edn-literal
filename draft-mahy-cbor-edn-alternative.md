@@ -400,18 +400,41 @@ More information about the representation of numbers in CBOR can be found in {{-
 ## Byte Strings
 
 
+~~~ abnf
+{::include bytes.abnf}
+~~~
+{: title="Snippet of ABNF for Byte Strings"}
+
+
+
 ## Text Strings
 
 UTF-8 {{-utf8}} text
 
+~~~ abnf
+{::include text.abnf}
+~~~
+{: title="Snippet of ABNF for Text Strings"}
 
 
+## WIP
+
+~~~ abnf
+{::include comments.abnf}
+~~~
+{: title="Snippet of ABNF for Comments"}
+
+~~~ abnf
+{::include app-ext.abnf}
+~~~
+{: title="Snippet of ABNF for Application Extensions"}
+
+~~~ abnf
+{::include scraps.abnf}
+~~~
+{: title="Remaining ABNF (Scraps)"}
 
 
-The rest of this section provides an overview over specific features
-of EDN, starting with certain common syntactical features and then
-going through kinds of CBOR data items roughly in the order of CBOR major
-types.
 Any additional detailed syntax discussion needed has been deferred to
 {{grammar}}.
 

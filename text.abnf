@@ -1,0 +1,18 @@
+text            = textrun / textstream
+textrun         = text1 *(S "+" S string1e)
+text1e          = text1 / ellipsis
+text1           = tstr spec
+string1e        = string1 / ellipsis
+string1         = (tstr / bstr) spec
+textstream      = "(_" MS textrun *(MSC textrun) SOC ")"
+tstr            = DQUOTE *double-quoted DQUOTE
+
+double-quoted   = unescaped
+                / SQUOTE
+                / "\" escapable-d
+                
+escapable-d     = escapable1
+                / DQUOTE
+                / "/"   ; / slash (solidus) U+002F (JSON!)
+                / (%s"u" hexchar) ;  uXXXX      U+XXXX
+

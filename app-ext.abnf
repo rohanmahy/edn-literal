@@ -1,0 +1,12 @@
+app-extension   = app-string / app-sequence
+app-string      = app-prefix sqstr
+app-sequence    = app-prefix "<<" seq ">>"
+
+; app-prefix cannot be true, false, null, or undefined
+app-prefix      = lcalpha *lcldh ; untagged variant
+                / ucalpha *ucldh ; tagged variant, if defined
+
+lcalpha         = %x61-7A ; a-z
+lcldh           = lcalpha / DIGIT / "-"
+ucalpha         = %x41-5A ; A-Z
+ucldh           = ucalpha / DIGIT / "-"
