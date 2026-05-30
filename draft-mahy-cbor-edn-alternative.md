@@ -45,20 +45,18 @@ venue:
 normative:
   RFC8949: cbor
   RFC8742: seq
-  STD68: abnf
-  STD63: utf8
+  RFC5234: abnf
+  RFC3629: utf8
   RFC7405: abnfcs
   RFC3339: datetime
   RFC3986: uri
   RFC3987: iri
   RFC9164: iptag
-  RFC9485: iregexp
-  IANA.cose: cose-reg
+  IANA.cose:
   IANA.cbor-tags: tags
   IANA.media-types:
   IANA.core-parameters:
-  BCP26: ianacons
-  STD80: ascii
+  RFC8126: ianacons
   I-D.ietf-core-href: cri
   IEEE754:
     target: https://ieeexplore.ieee.org/document/8766229
@@ -178,25 +176,16 @@ Finally, this document registers a media type identifier and a content-format fo
 {{Section 8 of RFC8949@-cbor}} includes a definition of the original CBOR "diagnostic notation".
 {{Appendix G of -cddl}} added popular features such as embedded CBOR and comments; it already refers to the format as "Extended Diagnostic Notation".
 
-Augmented Backus-Naur Form (ABNF) in this document refers to the language defined in {{-abnf}} as extended in {{-abnfcs}}, where the
-"characters" of {{Section 2.3 of RFC5234@-abnf}} are Unicode scalar values.
+Augmented Backus-Naur Form (ABNF) in this document refers to the language defined in {{-abnf}} as extended in {{-abnfcs}}, where the "characters" of {{Section 2.3 of RFC5234@-abnf}} are Unicode scalar values.
 
-Examples sometimes need to be quoted in the text, in particular in
-cases where the typewriter font used for example text cannot be
-distinguished in the plaintext rendition of this document.
-ASCII quotes, however, are already taken: `true`, `"true"`, `'true'`,
-and `` `true` `` are all different literals in EDN and should not be
-confused.
-Therefore, a different quoting convention as in »`true`« or »`"true"`«
-is used for examples in the text where this is needed to remain
-unambiguous.
+Examples sometimes need to be quoted in the text, in particular when the typewriter font used for example text in the HTML version of the document cannot be distinguished in the plaintext version.
+The literals: `true`, `"true"`, and `'true'` are all different in EDN and should not be confused.
+This document uses quoting such as: »`true`« or »`"true"`« where the distinction is not obvious in the plaintext but needs to remain unambiguous.
 
 <!-- text adapted from RFC 9581 -->
 Superscript notation denotes exponentiation.
 For example, 2 to the power of 64+1 is notated: 2<sup>64+1</sup>.
-In the plain-text rendition of this specification, superscript
-notation is not available and exponentiation is therefore rendered by
-the surrogate notation seen here in the plain-text rendition.
+In the plain-text rendition of this specification, superscript notation is not available and exponentiation is therefore rendered by the surrogate notation seen here in the plain-text rendition.
 
 {::boilerplate bcp14-tagged-bcp14}
 
@@ -1929,8 +1918,7 @@ title="ABNF Definition for Integrated Base64 Parser"
 }
 
 
-IANA Considerations {#sec-iana}
-===================
+# IANA Considerations {#sec-iana}
 
 [^to-be-removed]
 
@@ -1963,7 +1951,7 @@ Each entry in the registry must include:
 
 {:vspace}
 Application-Extension Identifier:
-: a lower case ASCII {{-ascii}} string that starts with a letter and can
+: a lower case ASCII string that starts with a letter and can
   contain letters, digits, and hyphens after that (`[a-z][a-z0-9-]*`).
   No other entry in the registry can have the same
   application-extension identifier.
@@ -2021,7 +2009,7 @@ Each entry in the registry must include:
 
 {:vspace}
 Encoding Indicator:
-: an ASCII {{-ascii}} string that starts with an underscore letter and
+: an ASCII string that starts with an underscore letter and
   can contain zero or more underscores, letters and digits after that
   (`_[_A-Za-z0-9]*`). No other entry in the registry can have the same
   Encoding Indicator.
