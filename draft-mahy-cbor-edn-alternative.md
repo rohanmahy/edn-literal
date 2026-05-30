@@ -278,7 +278,7 @@ The SOC production denotes an optional comma, with any amount of whitespace or c
 
 ## Arrays and Maps
 
-Arrays in EDN are similar to arrays in JSON, except that the commas between items are optional, and a final trailing comma is also optionally allowed.
+Arrays in EDN are similar to arrays in JSON, except that the commas between items are optional; and an optional, trailing comma after the last item is also allowed.
 Arrays contain zero or more items, of any combinations of item types.
 
 Maps in EDN correspond to objects in JSON.
@@ -289,7 +289,7 @@ Map _keys_ in the same map MUST NOT have duplicate values in EDN.
 
 > Warning: Determining if a map key that contains a map or a floating point value is equivalent to another map key that contains a map or floating point value requires special consideration. See {{Section 5.6 of RFC8949}} for specific guidance.
 
-As with arrays in EDN, commas between map key/value pairs are optional, and a final trailing comma is optionally allowed.
+As with arrays in EDN, commas between map key/value pairs are optional; and an optional, trailing comma after the last pair is also allowed.
 
 ~~~ abnf
 {::include collections.abnf}
@@ -309,6 +309,14 @@ Tags in CBOR {{Section 3.4 of RFC8949}} provide the tagged item with additional 
 
 EDN expresses tags using the tag number then the tagged content in parentheses.
 Tag numbers can be any unsigned 64-bit integer.
+
+~~~ cbor-diag
+{
+  "uri":     32("https://a.example"),
+  "visited": true
+}
+~~~
+{: title="An example EDN map with tagged and simple values"}
 
 Simple values in CBOR {{Section 3.3 of RFC8949}} are values that have a "major type" of 7 and no additional content.
 Simple values in CBOR have a numerical value from 0 to 23 inclusive, and from 32 to 255 inclusive.
