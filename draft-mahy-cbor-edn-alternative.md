@@ -204,43 +204,7 @@ The benefit of a text representation of this type of informations is to make it 
 EDN has several different ways of representing the same CBOR values.
 There is absolutely no expectation that converting from EDN to CBOR to EDN will result in the same EDN document.
 
-# Basic Output Format {#basic}
 
-> **TODO**: Move this section
-
-However, there is a certain expectation that EDN generators can be
-configured to some basic output format, which:
-
-* looks like JSON where that is possible;
-* inserts encoding indicators only where the binary form differs from
-  Preferred Serialization ({{Section 4.1 of RFC8949@-cbor}});
-* uses hexadecimal representation (`h''`) for byte strings, not
-  `b64''` or embedded CBOR (`<<>>`);
-* does not generate elaborate blank space (newlines, indentation) for
-  pretty-printing, but does use common blank spaces such as after `,`
-  and `:`.
-
-EDN generators may provide configuration to consistently select either
-the unescaped (directly readable) or an escaped (ASCII equivalent) form of
-characters in string literals; the latter allows EDN to be used when the
-diagnostic value of fully escaped characters may be desired or in
-environments where non-ASCII characters may not enjoy full data
-transparency.
-Similar to JSON, EDN is designed to allow a simple tool to convert any
-EDN (including EDN with application extensions unknown to the tool)
-into fully escaped (printable ASCII and newlines only) form, as well
-as to inversely recover unescaped characters for all escapes where
-this is possible or for certain subsets of the characters (such as
-Unicode categories L, M, N, P, S, plus Zs or just ASCII space).
-
-Additional features such as ensuring
-deterministic map ordering ({{Section 4.2 of RFC8949@-cbor}}) on output,
-or even deviating from the basic
-configuration in some systematic way, can further assist in comparing
-test data.
-Information obtained from a CDDL model can help in choosing
-application-oriented literals or specific string representations such
-as embedded CBOR or `b64''` in the appropriate places.
 
 Overview over CBOR Extended Diagnostic Notation (EDN) {#diagnostic-notation}
 =====================================================
@@ -1906,6 +1870,44 @@ b64-comment     = "#" *i-non-lf %x0A
 {: #abnf-grammar-sq-b64 sourcecode-name="cbor-edn-int-b64sq.abnf"
 title="ABNF Definition for Integrated Base64 Parser"
 }
+
+# Usage of EDN {#usage}
+
+## Basic Output Format {#basic}
+
+There is a certain expectation that EDN generators can be
+configured to some basic output format, which:
+
+* looks like JSON where that is possible;
+* inserts encoding indicators only where the binary form differs from
+  Preferred Serialization ({{Section 4.1 of RFC8949@-cbor}});
+* uses hexadecimal representation (`h''`) for byte strings, not
+  `b64''` or embedded CBOR (`<<>>`);
+* does not generate elaborate blank space (newlines, indentation) for
+  pretty-printing, but does use common blank spaces such as after `,`
+  and `:`.
+
+EDN generators may provide configuration to consistently select either
+the unescaped (directly readable) or an escaped (ASCII equivalent) form of
+characters in string literals; the latter allows EDN to be used when the
+diagnostic value of fully escaped characters may be desired or in
+environments where non-ASCII characters may not enjoy full data
+transparency.
+Similar to JSON, EDN is designed to allow a simple tool to convert any
+EDN (including EDN with application extensions unknown to the tool)
+into fully escaped (printable ASCII and newlines only) form, as well
+as to inversely recover unescaped characters for all escapes where
+this is possible or for certain subsets of the characters (such as
+Unicode categories L, M, N, P, S, plus Zs or just ASCII space).
+
+Additional features such as ensuring
+deterministic map ordering ({{Section 4.2 of RFC8949@-cbor}}) on output,
+or even deviating from the basic
+configuration in some systematic way, can further assist in comparing
+test data.
+Information obtained from a CDDL model can help in choosing
+application-oriented literals or specific string representations such
+as embedded CBOR or `b64''` in the appropriate places.
 
 
 # IANA Considerations {#sec-iana}
