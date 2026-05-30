@@ -173,6 +173,8 @@ Finally, this document registers a media type identifier and a content-format fo
 
 # Terminology and Conventions {#terminology}
 
+{::boilerplate bcp14-tagged-bcp14}
+
 {{Section 8 of RFC8949@-cbor}} includes a definition of the original CBOR "diagnostic notation".
 {{Appendix G of -cddl}} added popular features such as embedded CBOR and comments; it already refers to the format as "Extended Diagnostic Notation".
 
@@ -187,7 +189,8 @@ Superscript notation denotes exponentiation.
 For example, 2 to the power of 64+1 is notated: 2<sup>64+1</sup>.
 In the plain-text rendition of this specification, superscript notation is not available and exponentiation is therefore rendered by the surrogate notation seen here in the plain-text rendition.
 
-{::boilerplate bcp14-tagged-bcp14}
+Additional information about implementation and use of EDN is
+continuously being collected by the community in {{EDN-WIKI}}.
 
 # Objectives of this Document
 
@@ -204,29 +207,39 @@ The benefit of a text representation of this type of informations is to make it 
 EDN has several different ways of representing the same CBOR values.
 There is absolutely no expectation that converting from EDN to CBOR to EDN will result in the same EDN document.
 
+# Overview
+
+EDN is a superset of Interoperable JSON {{-i-json}}.
+Any Interoperable JSON text is a valid EDN text.
+Any other JSON {{RFC8259}} that consists only of UTF-8 characters, and has no duplicate names in any of its objects is also a valid EDN text.
+
+EDN adds support for additional native types in CBOR: byte strings, tagged values, and additional simple values.
+CBOR maps correspond to JSON objects; maps have map keys and values vs. object names and values.
+
+Below is a summary of the key features of EDN:
+
+- native support for all CBOR data types;
+- map keys can be any type;
+- string concatenation;
+- binary strings conveyed like text, hexadecimal, or base64;
+- extension types (app-strings and app-sequences);
+- comments;
+- embedded CBOR;
+- more number formats (ex: hexadecimal, octal, binary);
+- support for non-finite floating point values; and
+- CBOR encoding indicators.
+
+These feature will be described in subsequent sections.
+
+In addition to starting with a single EDN value, top-level array or map, EDN can represent bare CBOR sequences {{-seq}}.
+
+# Description of EDN {#diagnostic-notation}
+
+## EDN Structure and Types
 
 
-Overview over CBOR Extended Diagnostic Notation (EDN) {#diagnostic-notation}
-=====================================================
 
-CBOR is a binary interchange format.  To facilitate documentation and
-debugging, and in particular to facilitate communication between
-entities cooperating in debugging, this document defines a simple
-human-readable diagnostic notation.  All actual interchange always
-happens in the binary format.
 
-Note that diagnostic notation truly was designed as a diagnostic
-format; it originally was not meant to be parsed.
-Therefore, no formal definition (as in ABNF) was given in the original
-documents.
-Recognizing that formal grammars can aid interoperation of tools and
-usability of documents that employ EDN, {{grammars}} now provides ABNF
-definitions.
-
-EDN is a true superset of JSON as it is defined in {{RFC8259}} in
-conjunction with {{-i-json}} (that is, any interoperable {{-i-json}} JSON
-text also is an EDN text), extending it both to cover the greater
-expressiveness of CBOR and to increase its usability.
 
 EDN borrows the JSON syntax for numbers (integer and
 floating-point, {{numbers}}), certain simple values ({{simple-values}}),
@@ -235,19 +248,6 @@ strings, arrays, and maps (maps are called objects in JSON; the
 diagnostic notation extends JSON here by allowing any data item in the
 map key position).
 
-As EDN is used for truly diagnostic purposes, its implementations MAY
-support generation and possibly ingestion of EDN for CBOR data items
-that are well-formed but not valid.
-It is RECOMMENDED that an implementation enables such usage only
-explicitly by configuration (such as an API or CLI flag).
-Validity of CBOR data items is discussed in {{Section 5.3 of RFC8949@-cbor}},
-with basic validity discussed in {{Section 5.3.1 of RFC8949@-cbor}}, and
-tag validity discussed in {{Section 5.3.2 of RFC8949@-cbor}}.
-Tag validity is more likely a subject for individual
-application-oriented extensions, while the two cases of basic validity
-(for text strings and for maps) are addressed in Sections
-{{<text-validity}} and {{<map-validity}} under the heading
-of *validity*.
 
 The rest of this section provides an overview over specific features
 of EDN, starting with certain common syntactical features and then
@@ -256,8 +256,6 @@ types.
 Any additional detailed syntax discussion needed has been deferred to
 {{grammar}}.
 
-Additional information about implementation and use of EDN is
-continuously being collected by the community in {{EDN-WIKI}}.
 
 ## Application-Oriented Extension Literals {#app-lit}
 
@@ -1908,6 +1906,23 @@ test data.
 Information obtained from a CDDL model can help in choosing
 application-oriented literals or specific string representations such
 as embedded CBOR or `b64''` in the appropriate places.
+
+## More Usage
+
+As EDN is used for truly diagnostic purposes, its implementations MAY
+support generation and possibly ingestion of EDN for CBOR data items
+that are well-formed but not valid.
+It is RECOMMENDED that an implementation enables such usage only
+explicitly by configuration (such as an API or CLI flag).
+Validity of CBOR data items is discussed in {{Section 5.3 of RFC8949@-cbor}},
+with basic validity discussed in {{Section 5.3.1 of RFC8949@-cbor}}, and
+tag validity discussed in {{Section 5.3.2 of RFC8949@-cbor}}.
+Tag validity is more likely a subject for individual
+application-oriented extensions, while the two cases of basic validity
+(for text strings and for maps) are addressed in Sections
+{{<text-validity}} and {{<map-validity}} under the heading
+of *validity*.
+
 
 
 # IANA Considerations {#sec-iana}
