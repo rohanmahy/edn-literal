@@ -191,8 +191,6 @@ In the plain-text rendition of this specification, superscript notation is not a
 
 # Objectives of this Document
 
-{{Section 8 of RFC8949@-cbor}} describes the objective of defining a common human-readable diagnostic notation for CBOR.
-
 ## Converting CBOR to EDN
 
 EDN was designed to be able to represent (almost) any legal CBOR data item or sequence.
@@ -201,18 +199,10 @@ As such, converting from CBOR to EDN to CBOR should not result in a CBOR documen
 
 ## Converting from EDN to CBOR
 
-Another important use of EDN is for test vectors, examples in specifications, and configuration.
+Another important use of EDN is for test vectors, examples in specifications, continuous integration (CI), and configuration.
 The benefit of a text representation of this type of informations is to make it easier for humans to read, write, edit, and compare diffs.
 EDN has several different ways of representing the same CBOR values.
 There is absolutely no expectation that converting from EDN to CBOR to EDN will result in the same EDN document.
-
-One important application of EDN is the notation of CBOR data for
-humans: for ease of debugging, in specifications, and for entering test data.
-A number of features of EDN, such as comments are useful for humans to read.
-Programs also often output EDN for diagnostic purposes, such as in
-error messages or to enable comparison (including generation of diffs
-via tools) with test data.
-
 
 # Basic Output Format {#basic}
 
