@@ -30,20 +30,11 @@
 {{abnf-grammar-sq}}:
 : {{<<abnf-grammar-sq}}
 
-{{abnf-grammar-rs}}:
-: {{<<abnf-grammar-rs}}
-
 {{abnf-grammar-sq-h}}:
 : {{<<abnf-grammar-sq-h}}
 
 {{abnf-grammar-sq-b64}}:
 : {{<<abnf-grammar-sq-b64}}
-
-{{abnf-grammar-rs-h}}:
-: {{<<abnf-grammar-rs-h}}
-
-{{abnf-grammar-rs-b64}}:
-: {{<<abnf-grammar-rs-b64}}
 
 
 # List of Tables
@@ -79,7 +70,3 @@
 
 {{tab-content-format}}:
 : {{<<tab-content-format}}
-
-{{tab-tag-values}}:
-: {{<<tab-tag-values}}
-

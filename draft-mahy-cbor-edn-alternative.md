@@ -325,7 +325,7 @@ _application-oriented extension literals_, or _extension literals_ for short.
 
 Extension literals start with a _prefix_ that identifies the
 application-oriented extension, immediately followed by a sequence
-literal ({{embedded}}) or a single-quoted or raw string literal ({{strings}}).
+literal ({{embedded}}) or a single-quoted string literal ({{strings}}).
 The latter form uses its string literal as a shorthand
 form for a sequence literal representing a sequence with exactly that
 one text string data item.
@@ -369,7 +369,7 @@ In addition to specifying which of these two variations exhibits which
 specific semantics, the application extension specifies what input the
 extension takes.
 
-When the prefix is used immediately in front of a single-quoted or a raw
+When the prefix is used immediately in front of a single-quoted
 string, the input takes the form of a single text string CBOR data
 item.
 When used immediately in front of a sequence literal, the input is a
@@ -377,7 +377,7 @@ CBOR sequence of elements of the sequence literal as input.
 The application extension can provide behavior that depends on the
 number of items supplied as input to it and their data types; it
 cannot distinguish between its prefix being used with a single-quoted
-string, a raw string, or a CBOR sequence composed of a single text
+string, or a CBOR sequence composed of a single text
 string data item (as illustrated for instance in Tables {{<tab-equiv-dt}},
 {{<tab-equiv-ip}}, and {{<tab-equiv-hash}}).
 
@@ -708,7 +708,7 @@ the string constitute UTF-8 {{-utf8}} text, major type 3), and byte strings
 (CBOR does not further characterize the bytes that constitute the
 string, major type 2).
 
-EDN has three direct (unprefixed) notations for strings: double-quoted and raw
+EDN has two direct (unprefixed) notations for strings: double-quoted
 strings for (UTF-8) text strings, and single-quoted strings for byte strings.
 The latter are useful for byte strings carrying bytes that can be meaningfully
 notated as UTF-8 text ({{sq-lit}}).
@@ -717,7 +717,7 @@ Many strings are best notated as extension literals, which may
 provide detailed access to the bits within those bytes (see
 {{encoded-byte-strings}}).
 Extension literals can be constructed out of single-quoted strings and
-raw strings, as well as sequence literals.
+sequence literals.
 
 ### Double-Quoted String Literals {#dq-lit}
 
@@ -785,8 +785,7 @@ processed in a way that is defined by the meaning given to the prefix.
 Depending on the prefix, the result of that processing can, but need
 not be, a byte string value.
 
-Prefixed string literals (whether single-quoted after the
-prefix or a raw string ({{raw-lit}})) are used both for base-encoded byte string literals (see {{encoded-byte-strings}}) and for
+Prefixed string literals are used both for base-encoded byte string literals (see {{encoded-byte-strings}}) and for
 application-oriented extension literals (see {{app-lit}}, called app-string).
 (Additional kinds of base-encoded string literals can be defined as
 application-oriented extension literals by registering their prefixes;
@@ -794,88 +793,6 @@ there is no fundamental difference between the two predefined
 base-encoded string literal prefixes (`h`, `b64`) and any such potential
 future extension literal prefixes; for simplicity of expression, both
 cases are referred to as "extension literals".)
-
-### Raw String Literals {#raw-lit}
-
-Both double-quoted and single-quoted string literals handle
-backslashes in a special way.
-For string data items that employ backslashes themselves, possibly with additional layers
-of processing giving this "escaping" mechanism specific application semantics, this can
-lead to an exponential duplication of backslashes that has informally
-been described as "quoting hell".
-
-EDN therefore also allows text strings to be notated as raw string
-literals, which do not perform backslash processing.
-Instead, data transparency is provided by enclosing them in starting
-and ending delimiters built as a sequence of one or more backquote
-(»`` ` ``«, U+0060 GRAVE ACCENT) characters.
-
-For example, the I-Regexp »``[^ \t\n\r"'`]``«, a character class
-that excludes blank space and quoting characters, can be notated as:
-
-     ``[^ \t\n\r"'`]``
-
-instead of
-
-     "[^ \\t\\n\\r\"'`]"
-
-By using more backquotes for the outer delimiters than the longest
-sequence of backquotes that can be found in the string, internal
-backquotes do not prematurely end the string literal.
-An example for a raw string that contains a double backquote and
-therefore is notated starting and ending with a triple backquote:
-
-~~~ cbor-diag
-```To emulate typographic quotes, sometimes duplicate backward and
-forward single quotes are used, as in ``text.''
-```
-~~~
-
-This mechanism is easy to use for the large majority of cases.
-However:
-
-* Raw strings cannot be used for empty string data items, which
-  therefore need to be notated using double- or single-quoted strings.
-  (Obviously, there is no need to escape the content of empty strings,
-  so this should not be a problem.)
-
-* Without additional rules, raw strings could not be used for string
-  data items that start or end with backquotes, as these would
-  amalgamate with the start and end delimiters.
-
-To address the latter cases, two additional rules are added:
-
-* After processing the backquotes used as delimiters, any single
-  newline at the start of a raw string is removed.
-  As a result:
-
-       ```a```
-
-   can also be expressed as
-
-       ```
-       a```
-
-   In addition to enabling leading backquotes in raw strings, this can
-   be very useful for documentation strings etc.
-
-   This rule also allows notating »``` ``text''```« as:
-
-      ```
-      ``text''```
-
-* An ending delimiter with more backquotes than were used in the
-  starting delimiter contributes the superfluous ones to the string.
-
-  This allows notating »``` a = ``foo`` ```« as:
-
-      ```a = ``foo`````
-
-(The examples given here are minimal in that they show how the
-additional rules work; more complex examples would be necessary to
-provide additional motivation why this is a good case to handle.)
-
-See {{grammar}} for a more formal approach to defining these rules.
 
 
 ### Encoding Indicators of Strings {#ei-string}
@@ -911,13 +828,12 @@ string literals.
 The application-extension identifier selects one of the base encodings
 {{-base}}, without padding.
 Most often, the base encoding is
-enclosed in a single-quoted or raw string literal, prefixed by »h« for base16 or
+enclosed in a single-quoted string literal, prefixed by »h« for base16 or
 »b64« for base64 or base64url (the actual encodings of the latter two
 have the same meaning where they overlap, so the string remains unambiguous).
 For example, the byte string consisting of the four bytes `12 34 56 78`
 (given in hexadecimal here) could be written `h'12345678'` or
-`b64'EjRWeA'` when using single-quoted string literals, or
-``h`12345678` `` or ``b64`EjRWeA` `` when using raw string literals.
+`b64'EjRWeA'`.
 
 {:aside}
 >
@@ -1008,7 +924,7 @@ constitute UTF-8, e.g., by building larger sequences out of
 concatenating the subsequences; for validity of a text string
 resulting from these mechanisms it is only of importance that the
 result is UTF-8.
-Double-quoted, single-quoted, and raw string literals have been defined
+Double-quoted and single-quoted string literals have been defined
 such that they lead to byte sequences that are UTF-8: the source
 language of EDN is UTF-8, and all escaping mechanisms lead only to
 adding further UTF-8 characters.
@@ -1521,26 +1437,7 @@ The following additional items should help in the interpretation:
 6. {: #spec} `spec` stands for an encoding indicator.
   See {{encoding-indicators}} for details.
 
-7. {: #rawstring-grammar}
-  The ABNF grammar for raw strings is lenient; a parser needs to
-  implement the ABNF comments on `matchrawdelim` and `shortrawdelim` as
-  well.
-  `shortrawdelim` only matches sequences of backquotes that are
-  shorter than `startrawdelim`.
-  `matchrawdelim` only matches sequences of backquotes that are as
-  long or longer than `startrawdelim`.
-  Any excess number of backquotes in `matchrawdelim` are added to the
-  string content.
-
-  {:aside}
-  > In a PEG parser that implements predicates, these matching rules
-  > can for instance be implemented as follows:
-  >
-  >      startrawdelim = rawdelim&{|(rd)|@rdlen = rd.text_value.length}
-  >      shortrawdelim = rawdelim&{|(rd)|rd.text_value.length < @rdlen}
-  >      matchrawdelim = rawdelim&{|(rd)|rd.text_value.length >= @rdlen}
-
-8. {: #concat}
+7. {: #concat}
   Extended diagnostic notation allows a (text or byte) string to be
   built up from multiple (text or byte) string literals, separated by
   a `+` operator; these are then concatenated into a single string.
@@ -1598,8 +1495,7 @@ The following additional items should help in the interpretation:
       one app-string or an app-string together with a directly notated
       string cannot be processed.
       (This determination must be made at the time the app-string is
-      interpreted; see {{unknown}} for how this may not be immediately
-      during parsing.)
+      interpreted)
 
 ### Discussion
 
@@ -1976,26 +1872,6 @@ TWOHEX1  = ("8"/"9" / HEXDIGA) HEXDIG / "7F"
 {: #abnf-grammar-sq sourcecode-name="cbor-edn-intcommon.abnf"
 title="ABNF Definitions Useful for Integrated Extension Parsers"}
 
-Similarly, for integrated parsers for extension literals built from raw strings, the ABNF
-definitions in {{abnf-grammar-rs}} can be useful.
-`fitrawdelim` only matches sequences of backquotes that are exactly as
-long as a previous `startrawdelim`.
-
-~~~ abnf
-fitrawdelim  = rawdelim ; width == previous startrawdelim
-r-non-lf = %x0D / %x20-5f / %x61-7f / NONASCII / shortrawdelim
-~~~
-{: #abnf-grammar-rs sourcecode-name="cbor-edn-raw-intcommon.abnf"
-title="ABNF Definitions Useful for Raw String Integrated Extension Parsers"}
-
-
-  {:aside}
-  > In a PEG parser that implements predicates, the matching rule for fitrawdelim
-  > can for instance be implemented as follows:
-  >
-  >      fitrawdelim = rawdelim&{|(rd)|rd.text_value.length == @rdlen}
-
-
 Four subsections with ABNF for integrated parsers follow, a pair for
 `h''` and `b64''`, and a pair for ``` h`` ``` and ``` b64`` ```.
 There is no requirement for a new application-extension to supply ABNF
@@ -2057,59 +1933,6 @@ b64-comment     = "#" *i-non-lf %x0A
 {: #abnf-grammar-sq-b64 sourcecode-name="cbor-edn-int-b64sq.abnf"
 title="ABNF Definition for Integrated Base64 Parser"
 }
-
-
-### h``: ABNF Definition of Integrated Parser {#sq-h-raw-grammar}
-
-With glue ABNF similar to that in {{abnf-grammar-sq-glue}} and common
-definitions in Figures {{<abnf-grammar-ext-common}}, {{<abnf-grammar-sq}}
-and
-{{<abnf-grammar-rs}}, ABNF such as that shown in {{abnf-grammar-rs-h}} can
-be used as an integrated parser for ``` h ``` prefixed raw strings.
-
-~~~ abnf
-raw-app-string-h = %s"h" startrawdelim r-app-string-h
-r-app-string-h = rh-S *(HEXDIG rh-S HEXDIG rh-S / ellipsis rh-S)
-    (eol-comment *r-non-lf matchrawdelim / fitrawdelim)
-rh-S = *(lblank) *(rh-comment *(lblank))
-rh-2 = %x61-7f / NONASCII / shortrawdelim
-rh-non-slash = lblank / %x21-2e / %x30-5f / rh-2
-rh-non-slash-star = lblank / %x21-29 / %x2b-2e / %x30-5f / rh-2
-rh-non-star = lblank / %x21-29 / %x2b-5f / rh-2
-rh-ends-in-star = *rh-non-star 1*"*"
-rh-comment = "/" rh-non-slash-star *rh-non-slash "/"
-           / "/*" rh-ends-in-star
-                  *(rh-non-slash-star rh-ends-in-star) "/"
-           / eol-comment *r-non-lf %x0A
-~~~
-{: #abnf-grammar-rs-h sourcecode-name="cbor-edn-int-hraw.abnf"
-title="ABNF Definition for Integrated Raw String Hex Parser"
-}
-
-
-### b64``: ABNF Definition of Integrated Parser {#sq-b64-raw-grammar}
-
-With glue ABNF similar to that in {{abnf-grammar-sq-glue}}, common
-definitions in Figures {{<abnf-grammar-ext-common}}, {{<abnf-grammar-sq}}
-and {{<abnf-grammar-rs}} as well as the rule
-`b64dig` from {{abnf-grammar-sq-b64}}, ABNF such as
-that shown in {{abnf-grammar-rs-b64}} can be used as an integrated parser
-for ``` b64 ``` prefixed raw strings.
-
-
-~~~ abnf
-raw-app-string-b64 = %s"b64" startrawdelim r-app-string-b64
-r-app-string-b64  = rb64-S *(4(b64dig rb64-S))
-                  [b64dig rb64-S b64dig rb64-S
-                   ["=" rb64-S "=" / b64dig rb64-S ["="]] rb64-S]
-                  ("#" *r-non-lf matchrawdelim / fitrawdelim)
-rb64-S           = *lblank *(rb64-comment *lblank)
-rb64-comment     = "#" *r-non-lf %x0A
-~~~
-{: #abnf-grammar-rs-b64 sourcecode-name="cbor-edn-int-b64raw.abnf"
-title="ABNF Definition for Integrated Raw String Base64 Parser"
-}
-
 
 
 IANA Considerations {#sec-iana}

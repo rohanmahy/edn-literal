@@ -43,24 +43,9 @@ app-prefix      = lcalpha *lcldh ; including h and b64
                 / ucalpha *ucldh ; tagged variant, if defined
 app-string      = app-prefix sqstr
 app-sequence    = app-prefix "<<" seq ">>"
-app-rstring     = app-prefix rawstring
-rawstring       = startrawdelim
-                  [newline] ; swallow up to one leading newline
-                  rawcontent
-                  matchrawdelim
-rawdelim        = 1*"`"
-startrawdelim   = rawdelim
-                  ; width (number of backquotes) distinguishes
-                  ; between following matchrawdelim and shortrawdelim
-matchrawdelim   = rawdelim ; width >= previous startrawdelim
-shortrawdelim   = rawdelim ; width < previous startrawdelim
-rawchars        = 1*(%x0a/%x0d / %x20-5f / %x61-7e / NONASCII)
-rawcontent      = 1*(rawchars / shortrawdelim)
 
 sqstr           = SQUOTE *single-quoted SQUOTE
-bstr            = app-string / sqstr / app-rstring / rawstring
-                / app-sequence / embedded
-                  ; note: rawstring is text; app-... can be any type
+bstr            = app-string / sqstr / app-sequence / embedded
 tstr            = DQUOTE *double-quoted DQUOTE
 embedded        = "<<" seq ">>"
 
