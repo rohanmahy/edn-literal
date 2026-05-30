@@ -330,6 +330,65 @@ indicates major type 7, value 42, and »`simple(20)`« indicates
 
 ## Numbers
 
+In addition to the familiar decimal numbers used in JSON, EDN can use hexadecimal integers prefixed with "0x", octal integers prefixed with "0o", and binary numbers prefixed with "0b".
+Floating point numbers can also be represented in hexadecimal.
+
+Regardless of base, numbers composed only of digits (of the respective base) are interpreted by default as CBOR integers (major type 0/1).
+If the integer is too large or too small, the EDN processor MAY represent the integer as a CBOR bignum (see {{Section 3.4.3 of RFC8949}}), or return an error.
+
+A leading "`+`" sign is ignored, and a leading "`-`" sign makes a number negative.
+The EDN `0`, `000`, `+0`, and `-0` all represent the integer zero.
+Similarly, `1`, `001`, `+1` and `+0001` all represent the integer one;
+`-1` and `-0001` both represent the integer minus one.
+
+The presence of a decimal point (`.`) and/or an exponent (`e` for decimal or `p` for hexadecimal) makes EDN represent the number as a floating point number.
+The EDN `1.0` is a floating point number, whereas `1` is an integer.
+The grammar also allows `3.` for `3.0` and `.3` for `0.3` (in both decimal and hexadecimal floating point.
+
+{:aside}
+> Implementers are advised that the numeric parsers on some platform only accept a subset of the floating point syntax in this document. They may need to preprocess such numbers.
+
+Note that the floating point numbers `0.0` and `-0.0` are not the same number, even though they are mathematically equal.
+
+In {{tab-numbers}}, all the items on a single row are the same number, but they are distinct from items in a different row.
+The hexadecimal of their CBOR Preferred Serialization (see {{Section 4.1 of RFC8949}}) is also shown.
+
+| EDN                                            | CBOR hex            |
+|------------------------------------------------|---------------------|
+| `4711`, `0x1267`, `0o11147`, `0b1001001100111` | `19 1267` # uint    |
+| `1.5`, `0.15e1`, `15e-1`, `0x1.8p0`, `0x18p-4` | `F9 3E00` # float16 |
+| `0`, `+0`, `-0`                                | `00     ` # uint    |
+| `0.0`, `+0.0`, `.0`, `0.`                      | `F9 0000` # float16 |
+| `-0.0`                                         | `F9 8000` # float16 |
+| `Infinity`                                     | `F9 7C00` # float16 |
+| `-Infinity`                                    | `F9 FC00` # float16 |
+| `NaN`                                          | `F9 7E00` # float16 |
+{: #tab-numbers title="Example Sets of Equivalent Notations for Some Numbers"}
+
+The non-finite floating-point values `Infinity`, `-Infinity`, and `NaN` are written exactly as in this sentence.
+This is also a way they are written in JavaScript, although JSON does not allow non-finite floating-point values.
+
+`NaN` in EDN stands for the NaN value with a zero sign bit and an all-zero
+significand except for a set quiet bit; this is represented as
+0xF97E00 in CBOR Preferred Serialization.
+
+The ABNF for EDN numbers is below.
+The `decnumber` production represents an integer or floating-point number in decimal notation.
+Unsurprisingly `hexint`, `octint`, and `binint` productions correspond to integers in hexadecimal, octal, and binary representations, respectively.
+
+~~~ abnf
+{::include numbers.abnf}
+~~~
+{: title="Snippet of ABNF for Numbers"}
+
+The `hexfloat` production represents a hexadecimal floating-point number, using a mantissa in hexadecimal and an exponent in decimal notation.
+See Section 5.12.3 of {{IEEE754}}, Section 6.4.4.3 of {{C}}, or Section 5.13.4 of {{Cplusplus}} for more details.
+The floating-suffix/floating-point-suffix productions from {{C}} and {{Cplusplus}} are not used in EDN.
+
+Additional number formats, for example for representing rational numbers as fractions, can be added as EDN application extensions.
+More information about the representation of numbers in CBOR can be found in {{-numbers}}.
+
+
 ## Byte Strings
 
 
@@ -649,55 +708,8 @@ Specific forms of encoding indicators are discussed in further detail
 in {{ei-string}} for indefinite length strings and in {{ei-container}} for
 arrays and maps.
 
-## Numbers
+### Encoding Indicators for Numbers
 
-<!--
-## Hexadecimal, Octal, and Binary Numbers {#hexadecimal-octal-and-binary-numbers}
- -->
-
-In addition to JSON's decimal number literals, EDN provides hexadecimal, octal,
-and binary number literals in the usual C-language notation (octal with `0o`
-prefix present only).
-
-Numbers composed only of digits (of the respective base) are
-interpreted as CBOR integers (major type 0/1, or where the number
-cannot be represented in this way, major type 6 with tag 2/3).
-A leading "`+`" sign is a no-op, and a leading "`-`" sign inverts the
-sign of the number.
-So `0`, `000`, `+0` all represent the same integer zero, as does `-0`.
-Similarly,
-`1`, `001`, `+1` and `+0001` all stand for the same integer one, and
-`-1` and `-0001` both designate the same integer minus one.
-
-Using a decimal point (`.`) and/or an exponent (`e` for decimal, `p`
-for hexadecimal) turns the number into a floating point number (major
-type 7) instead, irrespective of whether it is an integral number
-mathematically.
-Note that, in floating point numbers, `0.0` is not the same number as
-`-0.0`, even if they are mathematically equal.
-
-In {{tab-numbers}}, all the items on a row are the same number (also
-shown in CBOR, hexadecimally), but they are distinct from items in a
-different row.
-
-| EDN                                            | CBOR hex            |
-|------------------------------------------------|---------------------|
-| `4711`, `0x1267`, `0o11147`, `0b1001001100111` | `19 1267` # uint    |
-| `1.5`, `0.15e1`, `15e-1`, `0x1.8p0`, `0x18p-4` | `F9 3E00` # float16 |
-| `0`, `+0`, `-0`                                | `00     ` # uint    |
-| `0.0`, `+0.0`                                  | `F9 0000` # float16 |
-| `-0.0`                                         | `F9 8000` # float16 |
-| `Infinity`                                     | `F9 7C00` # float16 |
-| `-Infinity`                                    | `F9 FC00` # float16 |
-| `NaN`                                          | `F9 7E00` # float16 |
-{: #tab-numbers title="Example Sets of Equivalent Notations for Some Numbers"}
-
-The non-finite floating-point values `Infinity`, `-Infinity`, and `NaN` are
-written exactly as in this sentence (this is also a way they can be
-written in JavaScript, although JSON does not allow them).
-`NaN` in EDN stands for the NaN value with a zero sign bit and an all-zero
-significand except for a set quiet bit; this is represented as
-0xF97E00 in CBOR Preferred Serialization.
 {{tab-non-finite-encoding}} shows how the floating point numbers 1.1, 1.5 and
 these three values are encoded in preferred serialization and when
 encoding indicators are given.
@@ -725,14 +737,6 @@ encoding indicators are given.
 {: #tab-non-finite-encoding title="Encoding indicators on floating
 point values" }
 
-See {{decnumber}} for additional details of the EDN number syntax.
-
-(Note that literals for further number formats, e.g., for representing
-rational numbers as fractions, or for other NaN values than the one called `NaN`, can
-be added as application-oriented literals.
-Background information beyond that in {{-cbor}} about the representation
-of numbers in CBOR can be found in the informational document
-{{-numbers}}.)
 
 ## Strings
 
@@ -1404,29 +1408,10 @@ The following additional items should help in the interpretation:
   If a carriage return is needed in the CBOR data item, it can be
   added explicitly using the escaped form `\r`.
 
-3. {: #decnumber}
-  `decnumber` stands for an integer in the usual decimal notation, unless at
-  least one of the optional parts starting with "." and "e" are
-  present, in which case it stands for a floating point value in the
-  usual decimal notation.  Note that the grammar now allows `3.` for
-  `3.0` and `.3` for `0.3` (also for hexadecimal floating point
-  below); implementers are advised that some platform numeric parsers
-  accept only a subset of the floating point syntax in this document
-  and may require some preprocessing to use here.
-
-4. `hexint`, `octint`, and `binint` stand for an integer in the usual base 16/hexadecimal
-  ("0x"), base 8/octal ("0o"), or base 2/binary ("0b") notation.
-  `hexfloat` stands
-  for a floating point number in the usual hexadecimal notation (which
-  uses a mantissa in hexadecimal and an exponent in decimal notation,
-  see Section 5.12.3 of {{IEEE754}}, Section 6.4.4.3 of {{C}}, or Section
-  5.13.4 of {{Cplusplus}}; floating-suffix/floating-point-suffix from
-  the latter two is not used here).
 
 5. For `hexint`, `octint`, `binint`, and when `decnumber` stands for an integer, the
   corresponding CBOR data item is represented using major type 0 or 1
-  if possible, or using tag 2 or 3 if not.
-  In the latter case, this specification does not define any encoding
+  if using tag 2 or 3, this specification does not define any encoding
   indicators that apply.
   If fine control over encoding is desired, this can be expressed by
   being explicit about the representation as a tag:
