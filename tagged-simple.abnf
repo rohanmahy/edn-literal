@@ -1,0 +1,19 @@
+uint            = "0" / DIGIT1 *DIGIT ; valid up to 2^64 - 1
+DIGIT1          = %x31-39 ; 1-9
+tagged          = uint spec "(" S item S ")"
+
+
+simple          = %s"false"
+                / %s"true"
+                / %s"null"
+                / %s"undefined"
+                / %s"simple(" S simple-number S ")"
+simple-number   = "25" %x30-35         ; 250-255
+                / "2" %x30-34 DIGIT    ; 200-249
+                / "1" 2DIGIT           ; 100-199
+                / %x34-39 DIGIT        ; 40-99
+                / "3" %x32-39          ; 32-39
+                ;; there are no simple values between 24-31
+                / "2" %x30-33          ; 20-23
+                / "1" DIGIT            ; 10-19
+                / DIGIT                ; 0-9

@@ -1,0 +1,8 @@
+array           = "[" (specms S item *(MSC item) SOC / spec S) "]"
+map             = "{" (specms S keyp *(MSC keyp) SOC / spec S) "}"
+keyp            = item S ":" S item
+
+spec            = ["_" *wordchar]     ; encoding indicator
+specms          = ["_" *wordchar MS]  ; encoding indicator with
+                                      ; mandatory space or comment
+wordchar        = "_" / ALPHA / DIGIT ; [_a-z0-9A-Z]

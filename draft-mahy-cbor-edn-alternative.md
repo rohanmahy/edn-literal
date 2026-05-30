@@ -254,7 +254,8 @@ Supported EDN types are:
 Ellipses signal that an item or items that was or should be present was elided (left out) of the EDN text at that location as described in {{elision}}.
 Parts of text and byte strings can also be elided.
 
-Application extensions consist of app-strings and app-sequences, as shown in the example table below:
+Application extensions (discussed later in detail in {{app-lit}}) consist of app-strings and app-sequences, which have different types depending on their prefix.
+A few examples of application extensions are shown in the table below:
 
 | Ext Type     | Example        | CBOR type   | CBOR value |
 |:-------------|:---------------|:------------|:-----------|
@@ -267,16 +268,77 @@ The following ABNF {{-abnf}} describes the top-level structure of EDN:
 ~~~ abnf
 {::include top-level.abnf}
 ~~~
+{: title="Snippet of Top-Level EDN ABNF"}
 
 
+The S production denotes optional whitespace or comments
+The MSC production is an abbreviation for "mandatory space or comma".
+Each item in a sequence needs to be separated by one at least comma, whitespace character, or comment.
+The SOC production denotes an optional comma, with any amount of whitespace or comments.
+
+## Arrays and Maps
+
+Arrays in EDN are similar to arrays in JSON, except that the commas between items are optional, and a final trailing comma is also optionally allowed.
+Arrays contain zero or more items, of any combinations of item types.
+
+Maps in EDN correspond to objects in JSON.
+As in JSON, each map key (object name in JSON) is separated from its value by a colon character (`:`).
+Unlike in JSON, the map keys in EDN can be any type of item, including arrays and maps nested to arbitrary depth.
+
+Map _keys_ in the same map MUST NOT have duplicate values in EDN.
+
+> Warning: Determining if a map key that contains a map or a floating point value is equivalent to another map key that contains a map or floating point value requires special consideration. See {{Section 5.6 of RFC8949}} for specific guidance.
+
+As with arrays in EDN, commas between map key/value pairs are optional, and a final trailing comma is optionally allowed.
+
+~~~ abnf
+{::include collections.abnf}
+~~~
+{: title="Snippet of ABNF for Arrays and Maps"}
+
+The first byte of any CBOR element indicates its "major type" and the number of additional bytes (the argument information or "ai") to describe the item (numbers, tags, and simple values) or its length (the other CBOR types).
+The `specms` and `spec` productions in the ABNF below are for (optional) encoding indicators which can indicate the number of additional bytes used (see {{encoding-indicators}}).
+
+CBOR also allows "indefinite length encoding" (see {{Section 3.2 of RFC8949}}) of arrays, maps, byte strings, and text strings.
+When an array begins with `[_` or a map begins with `{_`, and no `wordchar` production follows, the array or map encoding is indefinite length.
 
 
-EDN borrows the JSON syntax for numbers (integer and
-floating-point, {{numbers}}), certain simple values ({{simple-values}}),
+## Tagged and Simple Values
+
+Tags in CBOR {{Section 3.4 of RFC8949}} provide the tagged item with additional semantics. For example, a text string tagged with tag 32 indicates that the string is a URI.
+
+EDN expresses tags using the tag number then the tagged content in parentheses.
+Tag numbers can be any unsigned 64-bit integer.
+
+Simple values in CBOR {{Section 3.3 of RFC8949}} are values that have a "major type" of 7 and no additional content.
+Simple values in CBOR have a numerical value from 0 to 23 inclusive, and from 32 to 255 inclusive.
+
+EDN uses JSON syntax for the simple values »`false`« (20),
+»`true`« (21), and »`null`« (22).
+The value »`undefined`« (23) is written as in JavaScript.
+
+These and all other simple values can be given as "simple()" with the
+appropriate unsigned integer in the parentheses.  For example, »`simple(42)`«
+indicates major type 7, value 42, and »`simple(20)`« indicates
+»`false`«.
+
+~~~ abnf
+{::include tagged-simple.abnf}
+~~~
+{: title="Snippet of ABNF for Tagged and Simple Values"}
+
+
+## Numbers
+
+## Byte Strings
+
+
+## Text Strings
+
 UTF-8 {{-utf8}} text
-strings, arrays, and maps (maps are called objects in JSON; the
-diagnostic notation extends JSON here by allowing any data item in the
-map key position).
+
+
+
 
 
 The rest of this section provides an overview over specific features
@@ -1036,17 +1098,6 @@ d9 0001        # tag(1)
    1a 514b67b0 # unsigned(1363896240)
 ~~~
 
-
-## Simple values
-
-EDN uses JSON syntax for the simple values True (»`true`«), False
-(»`false`«), and Null (»`null`«).
-Undefined is written »`undefined`« as in JavaScript.
-
-These and all other simple values can be given as "simple()" with the
-appropriate unsigned integer in the parentheses.  For example, »`simple(42)`«
-indicates major type 7, value 42, and »`simple(20)`« indicates
-»`false`«.
 
 
 
