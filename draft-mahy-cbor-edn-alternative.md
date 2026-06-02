@@ -226,13 +226,34 @@ Below is a summary of the key features of EDN:
 - comments;
 - embedded CBOR;
 - more number formats (ex: hexadecimal, octal, binary);
-- support for non-finite floating point values;
+- support for non-finite floating-point values;
 - optional and trailing commas in arrays, maps, and sequences; and
 - CBOR encoding indicators.
 
-These feature will be described in subsequent sections.
+These features will be described in subsequent sections.
 
 In addition to starting with a single EDN value, top-level array or map, EDN can represent bare CBOR sequences {{-seq}}.
+
+A short example of an EDN document is below, showing some of the t:
+
+~~~ cbor-diag
+/ this is an EDN comment /          # and so is this
+
+# this is an array tagged with tag 18
+18([
+    '',
+    {},
+    # this is an embedded map
+    <<{
+        / issuer   / 1:   "issuer.example",
+        / expires  / 6:   1780392349.067,    # seconds since UNIX epoch
+        / verified / 180: true
+    }>>,
+    h'1234567890abcdef'
+])
+~~~
+{: title="Example simple EDN document"}
+
 
 # Description of EDN {#diagnostic-notation}
 
@@ -270,11 +291,10 @@ The following ABNF {{-abnf}} describes the top-level structure of EDN:
 ~~~
 {: title="Snippet of Top-Level EDN ABNF"}
 
-
-The S production denotes optional whitespace or comments
-The MSC production is an abbreviation for "mandatory space or comma".
-Each item in a sequence needs to be separated by one at least comma, whitespace character, or comment.
-The SOC production denotes an optional comma, with any amount of whitespace or comments.
+The `S` production denotes optional whitespace or comments.
+The `MSC` production is an abbreviation for "mandatory space or comma".
+Each item in a sequence needs to be separated by at least one comma, whitespace character, or comment.
+The `SOC` production denotes an optional comma, with any amount of whitespace or comments.
 
 ## Arrays and Maps
 
@@ -287,9 +307,39 @@ Unlike in JSON, the map keys in EDN can be any type of item, including arrays an
 
 Map _keys_ in the same map MUST NOT have duplicate values in EDN.
 
-> Warning: Determining if a map key that contains a map or a floating point value is equivalent to another map key that contains a map or floating point value requires special consideration. See {{Section 5.6 of RFC8949}} for specific guidance.
+> Warning: Determining if a map key that contains a map or a floating-point value is equivalent to another map key that contains a map or floating-point value requires special consideration. See {{Section 5.6 of RFC8949}} for specific guidance.
 
 As with arrays in EDN, commas between map key/value pairs are optional; and an optional, trailing comma after the last pair is also allowed.
+
+The following eight examples are all equivalent:
+
+~~~ cbor-diag
+[1, 2, 3]
+[1, 2, 3,]
+[1  2  3]
+[1  2  3,]
+[1  2, 3]
+[1  2, 3,]
+[1, 2  3]
+[1, 2  3,]
+~~~
+
+
+As are the following three examples:
+
+~~~ cbor-diag
+{1: "n", "x": "a"}
+{1: "n", "x": "a",}
+{1: "n"  "x": "a"}
+~~~
+
+As a comma and/or blank/comment is mandatory in a separator position,
+»`[11]`« is unambiguously an array with a single element (the
+integer 11), different from »`[1 1]`« or »`[1,1]`«.
+As this is a general rule, »`[[] []]`« or »`[[],[]]`« are well-formed
+EDN, while »`[[][]]`« is not.
+
+The ABNF for Arrays and Maps follows:
 
 ~~~ abnf
 {::include collections.abnf}
@@ -297,10 +347,18 @@ As with arrays in EDN, commas between map key/value pairs are optional; and an o
 {: title="Snippet of ABNF for Arrays and Maps"}
 
 The first byte of any CBOR element indicates its "major type" and the number of additional bytes (the argument information or "ai") to describe the item (numbers, tags, and simple values) or its length (the other CBOR types).
-The `specms` and `spec` productions in the ABNF below are for (optional) encoding indicators which can indicate the number of additional bytes used (see {{encoding-indicators}}).
+The `specms` and `spec` productions in the ABNF above are for (optional) encoding indicators which can indicate the number of additional bytes used (see {{encoding-indicators}}).
 
 CBOR also allows "indefinite length encoding" (see {{Section 3.2 of RFC8949}}) of arrays, maps, byte strings, and text strings.
 When an array begins with `[_` or a map begins with `{_`, and no `wordchar` production follows, the array or map encoding is indefinite length.
+Indefinite length encoding is also explained in more detail in {{encoding-indicators}}.
+
+EDN implementations MAY support EDN for CBOR data items that are well-formed but not valid ({{Section 5.3 of RFC8949@-cbor}}).
+For maps, this is relevant for duplicate map keys, as in:
+
+~~~ cbor-diag
+{1: "to", 1: "fro"}
+~~~
 
 
 ## Tagged and Simple Values
@@ -335,28 +393,30 @@ indicates major type 7, value 42, and »`simple(20)`« indicates
 ~~~
 {: title="Snippet of ABNF for Tagged and Simple Values"}
 
+As described in {{encoding-indicators}}, the tag number can be followed by an encoding indicator giving the encoding of the tag head.
+
 
 ## Numbers
 
 In addition to the familiar decimal numbers used in JSON, EDN can use hexadecimal integers prefixed with "0x", octal integers prefixed with "0o", and binary numbers prefixed with "0b".
-Floating point numbers can also be represented in hexadecimal.
+Both integers and floating-point numbers can also be represented in hexadecimal.
 
 Regardless of base, numbers composed only of digits (of the respective base) are interpreted by default as CBOR integers (major type 0/1).
 If the integer is too large or too small, the EDN processor MAY represent the integer as a CBOR bignum (see {{Section 3.4.3 of RFC8949}}), or return an error.
 
 A leading "`+`" sign is ignored, and a leading "`-`" sign makes a number negative.
 The EDN `0`, `000`, `+0`, and `-0` all represent the integer zero.
-Similarly, `1`, `001`, `+1` and `+0001` all represent the integer one;
-`-1` and `-0001` both represent the integer minus one.
+Similarly, `1`, `001`, `+1` and `+0001` all represent the integer positive one;
+`-1` and `-0001` both represent the integer negative one.
 
-The presence of a decimal point (`.`) and/or an exponent (`e` for decimal or `p` for hexadecimal) makes EDN represent the number as a floating point number.
-The EDN `1.0` is a floating point number, whereas `1` is an integer.
-The grammar also allows `3.` for `3.0` and `.3` for `0.3` (in both decimal and hexadecimal floating point.
+The presence of a decimal point (`.`) and/or an exponent (`e` for decimal or `p` for hexadecimal) makes EDN represent the number as a floating-point number.
+The EDN `1.0` is a floating-point number, whereas `1` is an integer.
+The grammar also allows `3.` for `3.0` and `.3` for `0.3` (in both decimal and hexadecimal floating-point.
 
 {:aside}
-> Implementers are advised that the numeric parsers on some platform only accept a subset of the floating point syntax in this document. They may need to preprocess such numbers.
+> Implementers are advised that the numeric parsers on some platforms only accept a subset of the floating-point syntax in this document. They may need to preprocess such numbers.
 
-Note that the floating point numbers `0.0` and `-0.0` are not the same number, even though they are mathematically equal.
+Note that the floating-point numbers `0.0` and `-0.0` are not the same number, even though they are mathematically equal.
 
 In {{tab-numbers}}, all the items on a single row are the same number, but they are distinct from items in a different row.
 The hexadecimal of their CBOR Preferred Serialization (see {{Section 4.1 of RFC8949}}) is also shown.
@@ -374,7 +434,7 @@ The hexadecimal of their CBOR Preferred Serialization (see {{Section 4.1 of RFC8
 {: #tab-numbers title="Example Sets of Equivalent Notations for Some Numbers"}
 
 The non-finite floating-point values `Infinity`, `-Infinity`, and `NaN` are written exactly as in this sentence.
-This is also a way they are written in JavaScript, although JSON does not allow non-finite floating-point values.
+This is also the way they are written in JavaScript, although JSON does not allow non-finite floating-point values.
 
 `NaN` in EDN stands for the NaN value with a zero sign bit and an all-zero
 significand except for a set quiet bit; this is represented as
@@ -399,123 +459,196 @@ More information about the representation of numbers in CBOR can be found in {{-
 
 ## Byte Strings
 
+CBOR supports two types of strings: byte strings can be any sequence of octets, while text strings need to be a legal sequence of UTF-8 characters.
+Byte strings can consist of any of the following:
+
+- bare single quoted strings, which look like text strings
+- base-encoded binary (either in hexadecimal or base64 encoding)
+- embedded CBOR (the CBOR representation of a CBOR item, often a CBOR map or array)
+- application extensions that generate a byte string. The extensions `h`, `b64`, `hash`, and one form of the lowercase `ip` extension result in a byte string.
 
 ~~~ abnf
 {::include bytes.abnf}
 ~~~
 {: title="Snippet of ABNF for Byte Strings"}
 
+### Single-Quoted String Literals {#sq-lit}
+
+Analogously to text string literals delimited by double quotes, EDN
+allows the use of single quotes (without a prefix) to express byte
+string literals with UTF-8 text; for instance, the following are
+equivalent:
+
+~~~~
+'hello world'
+h'68656c6c6f20776f726c64'
+~~~~
+
+The escaping rules of JSON strings are applied equivalently for
+text-based byte string literals, e.g., `\\` stands for a single
+backslash and `\'` stands for a single quote.
+However, to facilitate parsing, in single-quoted strings EDN excludes
+the following escaping mechanisms available for double-quoted strings:
+
+* `\/` is an escape in JSON that is available for EDN text strings to ensure all JSON texts are EDN literals.
+* `\u`-based escapes are not available for characters in the range from U+0020 to U+007E (printable ASCII characters).
+
+Single-quoted string literals can occur unprefixed and stand for the byte string that encodes its text string value (the "content"), or be prefixed by what looks like an application-extension prefix (see {{app-lit}}).
+
+In a prefixed string literal, the text content of the single-quoted string literal is not used directly as a byte string, but is further processed in a way that is defined by the meaning given to the prefix.
+Depending on the prefix, the result of that processing can, but need not be, a byte string value.
+
+Prefixed string literals are used both for base-encoded byte string literals (see {{encoded-byte-strings}}) and for application-oriented extension literals (see {{app-lit}}, called app-string).
+
+
+### Base-Encoded Byte String Literals {#encoded-byte-strings}
+
+Besides the unprefixed byte string literals that are analogous to JSON text string literals, EDN provides extension literals that can represent byte strings by base-encoding them.
+The hexadecimal encoding has the `h` prefix, and the base 64 encoding has the `b64` prefix.
+(The base 64 encoding can be either the traditional alphabet or the base64url alphabet, with or without padding.)
+Support for these two app-prefixes is MANDATORY.
+
+The application-extension identifier selects one of the base encodings
+{{-base}}, without padding.
+Most often, the base encoding is
+enclosed in a single-quoted string literal, prefixed by »h« for base16 or
+»b64« for base64 or base64url (the actual encodings of the latter two
+have the same meaning where they overlap, so the string remains unambiguous).
+For example, the byte string consisting of the four bytes `12 34 56 78`
+(given in hexadecimal here) could be written `h'12345678'` or
+`b64'EjRWeA'`.
+
+{:aside}
+>
+(Note that {{Section 8 of RFC8949@-cbor}} also mentions »b32« for
+base32 and »h32« for base32hex.
+This has not been implemented widely
+and therefore is not directly included in this specification.
+These and further byte string formats now can easily be added back as
+application-oriented extension literals.)
+
+Examples often benefit from some blank space (spaces, line breaks) in
+byte strings literals.
+In certain EDN prefixed byte string literals, blank space is ignored; for
+instance, the following are equivalent:
+
+~~~~ cbor-diag
+   h'48656c6c6f20776f726c64'
+   h'48 65 6c 6c 6f 20 77 6f 72 6c 64'
+   h'4 86 56c 6c6f
+     20776 f726c64'
+~~~~
+
+The internal syntax of prefixed single-quote literals such
+as `h''` and `b64''` can also allow comments as blank space (see {{comments}}).
+
+~~~~ cbor-diag
+   h'68656c6c6f20776f726c64'
+   h'68 65 6c /doubled l!/ 6c 6f # hello
+     20 /space/
+     77 6f 72 6c 64' /world/
+~~~~
+
+Slash characters are part of the base64 classic alphabet (see
+Table 1 in {{Section 4 of RFC4648}}).
+Therefore, only `#` end-of-line comments are allowed inside b64 byte string
+literals.
+
+~~~~ cbor-diag
+   b64'/base64 not a comment/ but one follows # comment'
+   h'FDB6AC 7BAE27A2D69CA2699E9EDFDBBADA2779FA25 968C2C'
+~~~~
+
+These two byte string literals stand for the same byte string; the
+deliberately confusing base64 content starts with
+`b64'/bas'` which is the same as h'FDB6AC' and ends with b64'lows'
+which is the same as `h'968C2C'`.
+
+### Embedded CBOR
 
 
 ## Text Strings
 
 UTF-8 {{-utf8}} text
 
+
+
+
 ~~~ abnf
 {::include text.abnf}
 ~~~
 {: title="Snippet of ABNF for Text Strings"}
 
+### Double-Quoted String Literals {#dq-lit}
 
-## WIP
+EDN enables notating text strings in a form compatible to that of notating text
+strings in JSON (i.e., as a double-quoted string literal), with a
+number of usability extensions.
+In JSON, no control characters are allowed to occur
+directly in text string literals; if needed, they can be specified using
+escapes such as `\t` or `\r`.
+In EDN, string literals additionally can contain newlines (LINEFEED
+U+000A), which are copied into the resulting string like other
+characters in the string literal.
+To deal with variability in platform presentation of newlines, any
+carriage return characters (U+000D) that may be present in the EDN
+string literal are not copied into the resulting string (see {{cr}}).
+No other control characters can occur directly in a string literal,
+and the handling of escaped characters (`\r` etc.) is as in JSON.
 
-~~~ abnf
-{::include comments.abnf}
+JSON's escape scheme for characters that are not on Unicode's basic
+multilingual plane (BMP) is cumbersome (see {{Section 7 of RFC8259@-json}}).
+EDN keeps it, but also adds the syntax `\u{NNN}` where NNN is the
+Unicode scalar value as a hexadecimal number.
+This means the following are equivalent (the first `o` is escaped as
+`\u{6f}` for no particular reason):
+
+~~~ cbor-diag
+"D\u{6f}mino's \u{1F073} + \u{2318}"   # \u{}-escape 3 chars
+"Domino's \uD83C\uDC73 + \u2318"       # escape JSON-like
+"Domino's 🁳 + ⌘"                       # unescaped
 ~~~
-{: title="Snippet of ABNF for Comments"}
-
-~~~ abnf
-{::include app-ext.abnf}
-~~~
-{: title="Snippet of ABNF for Application Extensions"}
-
-~~~ abnf
-{::include scraps.abnf}
-~~~
-{: title="Remaining ABNF (Scraps)"}
 
 
-Any additional detailed syntax discussion needed has been deferred to
-{{grammar}}.
+
+### Validity of Text Strings {#text-validity}
+
+To be valid CBOR, {{Section 5.3.1 of RFC8949@-cbor}} requires that text
+strings are byte sequences in UTF-8 {{-utf8}} form.
+EDN provides several ways to construct such byte strings (see {{concat}}
+for details).
+These mechanisms might operate on subsequences that do not themselves
+constitute UTF-8, e.g., by building larger sequences out of
+concatenating the subsequences; for validity of a text string
+resulting from these mechanisms it is only of importance that the
+result is UTF-8.
+Double-quoted and single-quoted string literals have been defined
+such that they lead to byte sequences that are UTF-8: the source
+language of EDN is UTF-8, and all escaping mechanisms lead only to
+adding further UTF-8 characters.
+Only prefixed string literals, other application-extensions, or
+in certain cases concatenation ({{concat}}) can generate non-UTF-8 byte
+sequences.
+
+As discussed at the start of {{diagnostic-notation}}, EDN
+implementations MAY support generation and possibly ingestion of EDN
+for CBOR data items that are well-formed but not valid; when this is
+enabled, such implementations MAY relax the requirement on text
+strings to be valid UTF-8.
+
+Note that neither CBOR about its text strings nor EDN about its source
+language make any requirements except for conformance to {{-utf8}}.
+No additional Unicode processing or validation such as normalization
+or checking whether a scalar value is actually assigned is foreseen by
+EDN, particularly not any processing that is dependent on a specific
+Unicode version.
+Such processing, if offered, MUST NOT get in the way of processing the
+data item represented in EDN (i.e., it may be appropriate to issue
+warnings but not to error out or to generate output that does not match
+the input at the UTF-8 level).
 
 
-## Application-Oriented Extension Literals {#app-lit}
-
-EDN provides _literals_ that represent CBOR data items textually.
-Many of the forms of literals provided are predefined by this
-document, but it also defines an extension point that enables defining additional
-_application-oriented extension literals_, or _extension literals_ for short.
-
-Extension literals start with a _prefix_ that identifies the
-application-oriented extension, immediately followed by a sequence
-literal ({{embedded}}) or a single-quoted string literal ({{strings}}).
-The latter form uses its string literal as a shorthand
-form for a sequence literal representing a sequence with exactly that
-one text string data item.
-
-{:aside}
-> This notation is generalized from
-{{Section 8 of RFC8949@-cbor}}, which provides for notating byte
-strings in a number of {{-base}} base encodings, where the encoded text
-is enclosed in single quotes, prefixed by a prefix (»h« for
-base16, »b32« for base32, »h32« for base32hex, »b64« for base64 or
-base64url).
->
-> This syntax can be thought to establish a name space, with the names
-"h", "b32", "h32", and "b64" taken, but other names being unallocated.
-The present specification allows registering additional names for this namespace,
-which it calls *application-extension identifiers*.
-
-More precisely, an *application-extension identifier* is a registered name consisting of a
-lower-case ASCII letter (`[a-z]`) and zero or more additional ASCII
-characters that are either lower-case letters, digits, or hyphens (`[a-z0-9-]`).
-»false«, »true«, »null«, and »undefined« cannot be used as such
-identifiers and are reserved.
-
-Application-extension identifiers are registered in the "Application-Extension Identifiers" registry
-({{appext-iana}}).
-
-An application-extension (such as `dt`) MAY also define the meaning of
-one additional prefix derived from its application-extension identifier by
-replacing each lower-case character by its upper-case counterpart (such
-as `DT`).
-As a convention, using the all-uppercase variant implies making use of
-a CBOR tag appropriate for this application-oriented extension (such
-as tag number 1 for `DT`, where in contrast the prefix `dt` stands for
-the unwrapped tag content).
-
-In summary, an application-extension identifier gives rise to one or two
-application-extension prefixes, one that is lexically identical to the
-identifier (i.e., all lowercase), and potentially another one that is an
-all-uppercase variation of it.
-In addition to specifying which of these two variations exhibits which
-specific semantics, the application extension specifies what input the
-extension takes.
-
-When the prefix is used immediately in front of a single-quoted
-string, the input takes the form of a single text string CBOR data
-item.
-When used immediately in front of a sequence literal, the input is a
-CBOR sequence of elements of the sequence literal as input.
-The application extension can provide behavior that depends on the
-number of items supplied as input to it and their data types; it
-cannot distinguish between its prefix being used with a single-quoted
-string, or a CBOR sequence composed of a single text
-string data item (as illustrated for instance in Tables {{<tab-equiv-dt}},
-{{<tab-equiv-ip}}, and {{<tab-equiv-hash}}).
-
-This specification defines a number of generally applicable
-application-oriented extensions ({{app-ext}}), both to motivate
-making these extensions generally available, and to illustrate the
-concept.
-
-Of these, the application-oriented extensions `h`, `b64`, `dt` and `ip` are
-intended to be mandatory to implement.
-(As mentioned, for simplicity we use the term "application-oriented
-extensions" for the mechanism discussed in this section even if it is
-used to describe a part of base EDN.)
-
-## Comments {#comments}
+## Comments
 
 For presentation to humans, EDN text may benefit from comments.
 JSON famously does not provide for comments, and the original
@@ -608,6 +741,129 @@ instead of the conventional, but often less familiar
 ~~~ cbor-diag
 4 / HMAC 256//64 /
 ~~~
+
+
+~~~ abnf
+{::include comments.abnf}
+~~~
+{: title="Snippet of ABNF for Comments"}
+
+
+
+## Application-Oriented Extension Literals {#app-lit}
+
+EDN provides _literals_ that represent CBOR data items textually.
+Many of the forms of literals provided are predefined by this
+document, but it also defines an extension point that enables defining additional
+_application-oriented extension literals_, or _extension literals_ for short.
+
+~~~ abnf
+{::include app-ext.abnf}
+~~~
+{: title="Snippet of ABNF for Application Extensions"}
+
+
+Extension literals start with a _prefix_ that identifies the
+application-oriented extension, immediately followed by a sequence
+literal ({{embedded}}) or a single-quoted string literal ({sq-lit}}).
+The latter form uses its string literal as a shorthand
+form for a sequence literal representing a sequence with exactly that
+one text string data item.
+
+{:aside}
+> This notation is generalized from
+{{Section 8 of RFC8949@-cbor}}, which provides for notating byte
+strings in a number of {{-base}} base encodings, where the encoded text
+is enclosed in single quotes, prefixed by a prefix (»h« for
+base16, »b32« for base32, »h32« for base32hex, »b64« for base64 or
+base64url).
+>
+> This syntax can be thought to establish a name space, with the names
+"h", "b32", "h32", and "b64" taken, but other names being unallocated.
+The present specification allows registering additional names for this namespace,
+which it calls *application-extension identifiers*.
+
+More precisely, an *application-extension identifier* is a registered name consisting of a
+lower-case ASCII letter (`[a-z]`) and zero or more additional ASCII
+characters that are either lower-case letters, digits, or hyphens (`[a-z0-9-]`).
+»false«, »true«, »null«, and »undefined« cannot be used as such
+identifiers and are reserved.
+
+Application-extension identifiers are registered in the "Application-Extension Identifiers" registry
+({{appext-iana}}).
+
+An application-extension (such as `dt`) MAY also define the meaning of
+one additional prefix derived from its application-extension identifier by
+replacing each lower-case character by its upper-case counterpart (such
+as `DT`).
+As a convention, using the all-uppercase variant implies making use of
+a CBOR tag appropriate for this application-oriented extension (such
+as tag number 1 for `DT`, where in contrast the prefix `dt` stands for
+the unwrapped tag content).
+
+In summary, an application-extension identifier gives rise to one or two
+application-extension prefixes, one that is lexically identical to the
+identifier (i.e., all lowercase), and potentially another one that is an
+all-uppercase variation of it.
+In addition to specifying which of these two variations exhibits which
+specific semantics, the application extension specifies what input the
+extension takes.
+
+When the prefix is used immediately in front of a single-quoted
+string, the input takes the form of a single text string CBOR data
+item.
+When used immediately in front of a sequence literal, the input is a
+CBOR sequence of elements of the sequence literal as input.
+The application extension can provide behavior that depends on the
+number of items supplied as input to it and their data types; it
+cannot distinguish between its prefix being used with a single-quoted
+string, or a CBOR sequence composed of a single text
+string data item (as illustrated for instance in Tables {{<tab-equiv-dt}},
+{{<tab-equiv-ip}}, and {{<tab-equiv-hash}}).
+
+This specification defines a number of generally applicable
+application-oriented extensions ({{app-ext}}), both to motivate
+making these extensions generally available, and to illustrate the
+concept.
+
+Of these, the application-oriented extensions `h`, `b64`, `dt` and `ip` are
+intended to be mandatory to implement.
+(As mentioned, for simplicity we use the term "application-oriented
+extensions" for the mechanism discussed in this section even if it is
+used to describe a part of base EDN.)
+
+
+
+### CBOR Sequence Literals {#embedded}
+
+In diagnostic notation, a sequence of zero or more CBOR data item literals can
+be enclosed in `<<` and `>>`, optionally prefixed by an
+application-extension prefix; this specification speaks of *sequence literals*.
+EDN mainly deals with individual data items, not with CBOR sequences
+{{-seq}}, so the CBOR sequence represented by the sequence literal needs
+to be further processed to obtain the value of the literal.
+
+Prefixed sequence literals refer to the application extension (see
+{{app-lit}}) identified by the prefix and apply the extension to its
+sequence content, resulting in a single data item.
+This data item may be a string or may not (always) be, depending on
+the definition of the application extension.
+
+An unprefixed sequence literal applies CBOR encoding to the
+data items in its content, taken as a CBOR sequence.
+The value of the
+literal thus is a byte string with the encoded content; this is
+commonly referred to as
+*embedded CBOR*.
+For instance, each pair of columns in the following are equivalent:
+
+~~~~ cbor-diag
+   <<1>>              h'01'
+   <<1, 2>>           h'0102'
+   <<"hello", null>>  h'65 68656c6c6f f6'
+   <<>>               h''
+~~~~
+
 
 ## Encoding Indicators {#encoding-indicators}
 
@@ -739,9 +995,10 @@ Specific forms of encoding indicators are discussed in further detail
 in {{ei-string}} for indefinite length strings and in {{ei-container}} for
 arrays and maps.
 
+
 ### Encoding Indicators for Numbers
 
-{{tab-non-finite-encoding}} shows how the floating point numbers 1.1, 1.5 and
+{{tab-non-finite-encoding}} shows how the floating-point numbers 1.1, 1.5 and
 these three values are encoded in preferred serialization and when
 encoding indicators are given.
 
@@ -769,99 +1026,19 @@ encoding indicators are given.
 point values" }
 
 
-## Strings
 
-CBOR distinguishes two kinds of strings: text strings (the bytes in
-the string constitute UTF-8 {{-utf8}} text, major type 3), and byte strings
-(CBOR does not further characterize the bytes that constitute the
-string, major type 2).
+### Encoding Indicators of Arrays and Maps {#ei-container}
 
-EDN has two direct (unprefixed) notations for strings: double-quoted
-strings for (UTF-8) text strings, and single-quoted strings for byte strings.
-The latter are useful for byte strings carrying bytes that can be meaningfully
-notated as UTF-8 text ({{sq-lit}}).
+A single underscore can be written after the opening brace of a map or
+the opening bracket of an array to indicate that the data item was
+represented in indefinite-length format.  For example, `[_ 1, 2]`
+contains an indicator that an indefinite-length representation was
+used to represent the data item `[1, 2]`.
 
-Many strings are best notated as extension literals, which may
-provide detailed access to the bits within those bytes (see
-{{encoded-byte-strings}}).
-Extension literals can be constructed out of single-quoted strings and
-sequence literals.
-
-### Double-Quoted String Literals {#dq-lit}
-
-EDN enables notating text strings in a form compatible to that of notating text
-strings in JSON (i.e., as a double-quoted string literal), with a
-number of usability extensions.
-In JSON, no control characters are allowed to occur
-directly in text string literals; if needed, they can be specified using
-escapes such as `\t` or `\r`.
-In EDN, string literals additionally can contain newlines (LINEFEED
-U+000A), which are copied into the resulting string like other
-characters in the string literal.
-To deal with variability in platform presentation of newlines, any
-carriage return characters (U+000D) that may be present in the EDN
-string literal are not copied into the resulting string (see {{cr}}).
-No other control characters can occur directly in a string literal,
-and the handling of escaped characters (`\r` etc.) is as in JSON.
-
-JSON's escape scheme for characters that are not on Unicode's basic
-multilingual plane (BMP) is cumbersome (see {{Section 7 of RFC8259@-json}}).
-EDN keeps it, but also adds the syntax `\u{NNN}` where NNN is the
-Unicode scalar value as a hexadecimal number.
-This means the following are equivalent (the first `o` is escaped as
-`\u{6f}` for no particular reason):
-
-~~~ cbor-diag
-"D\u{6f}mino's \u{1F073} + \u{2318}"   # \u{}-escape 3 chars
-"Domino's \uD83C\uDC73 + \u2318"       # escape JSON-like
-"Domino's 🁳 + ⌘"                       # unescaped
-~~~
-
-### Single-Quoted String Literals {#sq-lit}
-
-Analogously to text string literals delimited by double quotes, EDN
-allows the use of single quotes (without a prefix) to express byte
-string literals with UTF-8 text; for instance, the following are
-equivalent:
-
-~~~~
-'hello world'
-h'68656c6c6f20776f726c64'
-~~~~
-
-The escaping rules of JSON strings are applied equivalently for
-text-based byte string literals, e.g., `\\` stands for a single
-backslash and `\'` stands for a single quote.
-However, to facilitate parsing, in single-quoted strings EDN excludes
-certain escaping mechanisms available for double-quoted strings:
-
-* `\/` is an escape in JSON that is available for EDN text strings as
-  well to ensure all JSON texts are EDN literals.
-  Since EDN's single-quoted strings do not occur in JSON, this legacy
-  compatibility feature is not available for them.
-* `\u`-based escapes are not available for characters in the range
-  from U+0020 to U+007E (essentially, printable ASCII).
-
-Single-quoted string literals can occur unprefixed and stand for the
-byte string that encodes its text string value (the "content"), or be
-prefixed by what looks like an application-extension prefix (see
-{{app-lit}}).
-
-In a prefixed string literal, the text content of the single-quoted
-string literal is not used directly as a byte string, but is further
-processed in a way that is defined by the meaning given to the prefix.
-Depending on the prefix, the result of that processing can, but need
-not be, a byte string value.
-
-Prefixed string literals are used both for base-encoded byte string literals (see {{encoded-byte-strings}}) and for
-application-oriented extension literals (see {{app-lit}}, called app-string).
-(Additional kinds of base-encoded string literals can be defined as
-application-oriented extension literals by registering their prefixes;
-there is no fundamental difference between the two predefined
-base-encoded string literal prefixes (`h`, `b64`) and any such potential
-future extension literal prefixes; for simplicity of expression, both
-cases are referred to as "extension literals".)
-
+At the same position, encoding indicators for specifying the size of
+the array or map head for definite-length format can be used instead,
+specifically `_i` or `_0` to `_3`.  For example `[_0 false, true]` can be
+used to specify the encoding of the array `[false, true]` as `98 02 f4 f5`.
 
 ### Encoding Indicators of Strings {#ei-string}
 
@@ -887,276 +1064,29 @@ need to be notated as `(_ '')`, `(_ "")`, etc.,
 when it is desired to preserve the chunk structure.
 
 
-### Base-Encoded Byte String Literals {#encoded-byte-strings}
+## Remaining bits of the ABNF
 
-Besides the unprefixed byte string literals that are analogous to JSON text
-string literals, EDN provides extension literals that can represent
-byte strings by base-encoding them, typically notated as prefixed
-string literals.
-The application-extension identifier selects one of the base encodings
-{{-base}}, without padding.
-Most often, the base encoding is
-enclosed in a single-quoted string literal, prefixed by »h« for base16 or
-»b64« for base64 or base64url (the actual encodings of the latter two
-have the same meaning where they overlap, so the string remains unambiguous).
-For example, the byte string consisting of the four bytes `12 34 56 78`
-(given in hexadecimal here) could be written `h'12345678'` or
-`b64'EjRWeA'`.
-
-{:aside}
->
-(Note that {{Section 8 of RFC8949@-cbor}} also mentions »b32« for
-base32 and »h32« for base32hex.
-This has not been implemented widely
-and therefore is not directly included in this specification.
-These and further byte string formats now can easily be added back as
-application-oriented extension literals.)
-
-Examples often benefit from some blank space (spaces, line breaks) in
-byte strings literals.
-In certain EDN prefixed byte string literals, blank space is ignored; for
-instance, the following are equivalent:
-
-~~~~ cbor-diag
-   h'48656c6c6f20776f726c64'
-   h'48 65 6c 6c 6f 20 77 6f 72 6c 64'
-   h'4 86 56c 6c6f
-     20776 f726c64'
-~~~~
-
-The internal syntax of prefixed single-quote literals such
-as `h''` and `b64''` can also allow comments as blank space (see {{comments}}).
-
-~~~~ cbor-diag
-   h'68656c6c6f20776f726c64'
-   h'68 65 6c /doubled l!/ 6c 6f # hello
-     20 /space/
-     77 6f 72 6c 64' /world/
-~~~~
-
-Slash characters are part of the base64 classic alphabet (see
-Table 1 in {{Section 4 of RFC4648}}), and they therefore need to be in the
-`b64''` set of characters that contribute to the byte string.
-Therefore, only end-of-line comments are available inside b64 byte string
-literals.
-
-~~~~ cbor-diag
-   b64'/base64 not a comment/ but one follows # comment'
-   h'FDB6AC 7BAE27A2D69CA2699E9EDFDBBADA2779FA25 968C2C'
-~~~~
-
-These two byte string literals stand for the same byte string; the
-deliberately confusing base64 content starts with
-`b64'/bas'` which is the same as h'FDB6AC' and ends with b64'lows'
-which is the same as `h'968C2C'`.
-
-
-### CBOR Sequence Literals {#embedded}
-
-In diagnostic notation, a sequence of zero or more CBOR data item literals can
-be enclosed in `<<` and `>>`, optionally prefixed by an
-application-extension prefix; this specification speaks of *sequence literals*.
-EDN mainly deals with individual data items, not with CBOR sequences
-{{-seq}}, so the CBOR sequence represented by the sequence literal needs
-to be further processed to obtain the value of the literal.
-
-Prefixed sequence literals refer to the application extension (see
-{{app-lit}}) identified by the prefix and apply the extension to its
-sequence content, resulting in a single data item.
-This data item may be a string or may not (always) be, depending on
-the definition of the application extension.
-
-An unprefixed sequence literal applies CBOR encoding to the
-data items in its content, taken as a CBOR sequence.
-The value of the
-literal thus is a byte string with the encoded content; this is
-commonly referred to as
-*embedded CBOR*.
-For instance, each pair of columns in the following are equivalent:
-
-~~~~ cbor-diag
-   <<1>>              h'01'
-   <<1, 2>>           h'0102'
-   <<"hello", null>>  h'65 68656c6c6f f6'
-   <<>>               h''
-~~~~
-
-### Validity of Text Strings {#text-validity}
-
-To be valid CBOR, {{Section 5.3.1 of RFC8949@-cbor}} requires that text
-strings are byte sequences in UTF-8 {{-utf8}} form.
-EDN provides several ways to construct such byte strings (see {{concat}}
-for details).
-These mechanisms might operate on subsequences that do not themselves
-constitute UTF-8, e.g., by building larger sequences out of
-concatenating the subsequences; for validity of a text string
-resulting from these mechanisms it is only of importance that the
-result is UTF-8.
-Double-quoted and single-quoted string literals have been defined
-such that they lead to byte sequences that are UTF-8: the source
-language of EDN is UTF-8, and all escaping mechanisms lead only to
-adding further UTF-8 characters.
-Only prefixed string literals, other application-extensions, or
-in certain cases concatenation ({{concat}}) can generate non-UTF-8 byte
-sequences.
-
-As discussed at the start of {{diagnostic-notation}}, EDN
-implementations MAY support generation and possibly ingestion of EDN
-for CBOR data items that are well-formed but not valid; when this is
-enabled, such implementations MAY relax the requirement on text
-strings to be valid UTF-8.
-
-Note that neither CBOR about its text strings nor EDN about its source
-language make any requirements except for conformance to {{-utf8}}.
-No additional Unicode processing or validation such as normalization
-or checking whether a scalar value is actually assigned is foreseen by
-EDN, particularly not any processing that is dependent on a specific
-Unicode version.
-Such processing, if offered, MUST NOT get in the way of processing the
-data item represented in EDN (i.e., it may be appropriate to issue
-warnings but not to error out or to generate output that does not match
-the input at the UTF-8 level).
-
-## Arrays and Maps
-
-EDN borrows the JSON syntax for arrays and maps.
-(Maps are called objects in JSON.)
-
-### Mandatory Separators, Optional Terminators
-
-For maps, EDN extends the JSON syntax by allowing any data item in the
-map key position (before the colon).
-
-JSON requires the use of a comma as a separator character between
-the elements of an array as well as between the members (key/value
-pairs) of a map.
-(These commas also were required in the original diagnostic
-notation defined in {{-cbor}} and {{-cddl}}.)
-The separator commas are now optional in the places where EDN syntax
-allows commas; however, where no comma is used in a separator
-position, there must be blank space (composed of at least one space, newline, and/or
-comment) instead.
-(Stylistically, leaving out the commas is more idiomatic when they
-occur at line breaks, which provide the blank space.)
-
-In addition, EDN also allows, but does not require, a trailing comma before the closing bracket/brace,
-enabling an easier to maintain "terminator" style of their use.
-
-In summary, the following eight examples are all equivalent:
-
-~~~ cbor-diag
-[1, 2, 3]
-[1, 2, 3,]
-[1  2  3]
-[1  2  3,]
-[1  2, 3]
-[1  2, 3,]
-[1, 2  3]
-[1, 2  3,]
+~~~ abnf
+{::include scraps.abnf}
 ~~~
+{: title="Remaining ABNF (Scraps)"}
 
-as are
-
-~~~ cbor-diag
-{1: "n", "x": "a"}
-{1: "n", "x": "a",}
-{1: "n"  "x": "a"}
-# etc.
-~~~
-
-As a comma and/or blank/comment is mandatory in a separator position,
-»`[11]`« is unambiguously an array with a single element (the
-integer 11), different from »`[1 1]`« or »`[1,1]`«.
-As this is a general rule, »`[[] []]`« or »`[[],[]]`« are well-formed
-EDN, while »`[[][]]`« is not.
-
-{:aside}
-> CDDL's comma separators in the equivalent contexts (CDDL groups) are
-  entirely optional
-  (and actually are terminators, which together with their optionality
-  allows them to be used like separators as well, or even not at all).
-  In summary, comma use is now aligned between EDN and CDDL, in a
-  fully backward compatible way.
-  (CDDL does allow the stylistically questionable »`a = [[][]]`«, though.)
-
-### Encoding Indicators of Arrays and Maps {#ei-container}
-
-A single underscore can be written after the opening brace of a map or
-the opening bracket of an array to indicate that the data item was
-represented in indefinite-length format.  For example, `[_ 1, 2]`
-contains an indicator that an indefinite-length representation was
-used to represent the data item `[1, 2]`.
-
-At the same position, encoding indicators for specifying the size of
-the array or map head for definite-length format can be used instead,
-specifically `_i` or `_0` to `_3`.  For example `[_0 false, true]` can be
-used to specify the encoding of the array `[false, true]` as `98 02 f4 f5`.
-
-### Validity of Maps {#map-validity}
-
-As discussed at the start of {{diagnostic-notation}}, EDN implementations MAY support
-generation and possibly ingestion of EDN for CBOR data items that are
-well-formed but not valid ({{Section 5.3 of RFC8949@-cbor}}).
-
-For maps, this is relevant for map keys that occur more than once, as in:
-
-~~~ cbor-diag
-{1: "to", 1: "fro"}
-~~~
-
-## Tags
-
-A tag is
-written as a decimal unsigned integer for the tag number, followed by the tag content
-in parentheses; for instance, a date in the format specified by RFC 3339
-(ISO 8601) could be
-notated as:
-
-{: indent='5'}
-0("2013-03-21T20:04:00Z")
-
-or the equivalent epoch-based time as the following:
-
-{: indent='5'}
-1(1363896240)
-
-The tag number can be followed by an encoding indicator giving the
-encoding of the tag head.  For example:
-
-{: indent='5'}
-1_1(1363896240)
-
-(assuming Preferred Serialization for the tag content) is encoded as
-
-~~~ cbor-pretty
-d9 0001        # tag(1)
-   1a 514b67b0 # unsigned(1363896240)
-~~~
+Any additional detailed syntax discussion needed has been deferred to
+{{grammar}}.
 
 
+# Application Extensions {#app-ext}
 
+This document extends the syntax used in diagnostic notation to enable application-oriented extensions.
+Four such extensions are defined in this section.
 
-Application-Oriented Extension Literals {#app-ext}
-=======================================
+## The "dt" Extension {#dt}
 
-This document extends the syntax used in diagnostic notation to also
-enable application-oriented extensions.
-This section defines a number of application-oriented extensions.
+The application-extension identifier "dt" is used to notate a date/time literal that can be used as an Epoch-Based Date/Time as per {{Section 3.4.2 of RFC8949@-cbor}}.
 
+The content of the extension is a single Standard Date/Time String as per {{Section 3.4.1 of RFC8949@-cbor}}, as a text or byte string.
 
-The "dt" Extension {#dt}
-------------------
-
-The application-extension identifier "dt" is used to notate a
-date/time literal that can be used as an Epoch-Based Date/Time as per
-{{Section 3.4.2 of RFC8949@-cbor}}.
-
-The content of the literal is a single Standard Date/Time String as per
-{{Section 3.4.1 of RFC8949@-cbor}}, as a text or byte string.
-
-The value of the literal is a number representing the result of a
-conversion of the given Standard Date/Time String to an Epoch-Based
-Date/Time.
+The value of the literal is a number representing the result of a conversion of the given Standard Date/Time String to an Epoch-Based Date/Time.
 If fractional seconds are given in the text (production
 `time-secfrac` in {{abnf-grammar-dt}}), the value is a
 floating-point number; the value is an integer number otherwise.
@@ -1469,8 +1399,8 @@ The following additional items should help in the interpretation:
   specific sizes for tag head, byte string head, and the overall byte
   string.
 
-   When `decnumber` stands for a floating point value, and for
-   `hexfloat` and `nonfin`, a floating point data item with major
+   When `decnumber` stands for a floating-point value, and for
+   `hexfloat` and `nonfin`, a floating-point data item with major
    type 7 is used in Preferred Serialization (unless modified by an
    encoding indicator, which then needs to be `_1`, `_2`, or `_3`).
    For this, the number range needs to fit into an {{IEEE754}} binary64 (or the size
@@ -1480,7 +1410,7 @@ The following additional items should help in the interpretation:
    Tag 4/5 representations are not generated in these cases.
    Future app-prefixes could be defined to allow more control for
    obtaining a tag 4/5 representation directly from a hex or decimal
-   floating point literal.
+   floating-point literal.
 
 6. {: #spec} `spec` stands for an encoding indicator.
   See {{encoding-indicators}} for details.
@@ -2033,7 +1963,7 @@ tag validity discussed in {{Section 5.3.2 of RFC8949@-cbor}}.
 Tag validity is more likely a subject for individual
 application-oriented extensions, while the two cases of basic validity
 (for text strings and for maps) are addressed in Sections
-{{<text-validity}} and {{<map-validity}} under the heading
+{{<text-validity}} and map-validity under the heading
 of *validity*.
 
 
