@@ -467,6 +467,8 @@ Byte strings can consist of any of the following:
 - embedded CBOR (the CBOR representation of a CBOR item, often a CBOR map or array)
 - application extensions that generate a byte string. The extensions `h`, `b64`, `hash`, and one form of the lowercase `ip` extension result in a byte string.
 
+The ABNF for byte strings is below:
+
 ~~~ abnf
 {::include bytes.abnf}
 ~~~
@@ -474,21 +476,17 @@ Byte strings can consist of any of the following:
 
 ### Single-Quoted String Literals {#sq-lit}
 
-Analogously to text string literals delimited by double quotes, EDN
-allows the use of single quotes (without a prefix) to express byte
-string literals with UTF-8 text; for instance, the following are
-equivalent:
+As with text string literals delimited by double quotes, EDN uses single quotes (without a prefix) to express byte strings containing UTF-8 text
+For example, the following are equivalent:
 
 ~~~~
 'hello world'
-h'68656c6c6f20776f726c64'
+h'68656c6c6f20776f726c64'  # hexadecimal of »hello world«
 ~~~~
 
-The escaping rules of JSON strings are applied equivalently for
-text-based byte string literals, e.g., `\\` stands for a single
-backslash and `\'` stands for a single quote.
-However, to facilitate parsing, in single-quoted strings EDN excludes
-the following escaping mechanisms available for double-quoted strings:
+Unprefixed byte strings share most of the same escaping rules as text strings.
+For example:  `\\` stands for a single backslash and `\'` stands for a single quote.
+However, EDN single-quoted strings exclude the following escaping mechanisms available for double-quoted strings:
 
 * `\/` is an escape in JSON that is available for EDN text strings to ensure all JSON texts are EDN literals.
 * `\u`-based escapes are not available for characters in the range from U+0020 to U+007E (printable ASCII characters).
@@ -506,7 +504,6 @@ Prefixed string literals are used both for base-encoded byte string literals (se
 Besides the unprefixed byte string literals that are analogous to JSON text string literals, EDN provides extension literals that can represent byte strings by base-encoding them.
 The hexadecimal encoding has the `h` prefix, and the base 64 encoding has the `b64` prefix.
 (The base 64 encoding can be either the traditional alphabet or the base64url alphabet, with or without padding.)
-Support for these two app-prefixes is MANDATORY.
 
 The application-extension identifier selects one of the base encodings
 {{-base}}, without padding.
